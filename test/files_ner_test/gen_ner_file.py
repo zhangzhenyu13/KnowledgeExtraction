@@ -4,9 +4,11 @@ import collections
 from textblob import TextBlob
 from knowledgeextractor.utils.text_segment import to_sentences
 class ExampleSementer:
-    def __init__(self, max_seq_length):
+    def __init__(self, max_seq_length, key_text="originalText", key_entities="entities"):
         self.max_seq_length=max_seq_length
         self.initState()
+        self.key_entities=key_entities
+        self.key_text=key_text
         
     def initState(self):
         self._curLen=0
@@ -26,57 +28,63 @@ class ExampleSementer:
             print(ent, txt[s:e])
         print("*"*50,"\n")
 
-    def _get_record(self):
+    def _get_record(self, entities):
         ents=[]
         txts=self._txts
-
+        #print(self._pos, self._curLen, self._offset, len(entities))
         while self._pos<len(entities) and entities[self._pos]["end_pos"]<self._offset+self._curLen:
-                ent=entities[pos]
+                ent=entities[self._pos]
                 ent["start_pos"]-=self._offset
                 ent["end_pos"]-=self._offset
                 ents.append(ent)
                 self._pos+=1
         self._offset+=self._curLen
-        curLen=0
+        self._curLen=0
         txt="".join(txts)
         record={"text":txt, "entities":ents}
-        ents.clear()
-        txts.clear()
+        self._txts.clear()
         return record
     
     def seg_single_exmple(self, record):
-        entities=record["entities"]
-        text=record["text"]
+        entities=record[self.key_entities]
+        text=record[self.key_text]
         sents=[]
         self.initState()
 
         records=[]
 
         lengths=[]
+        length_pos=0
         for sent in to_sentences(text):
-            print(sent)
+            #print(sent)
             sents.append(sent)
-            lengths.append(len(sent))
+            lengths.append([length_pos,len(sent)])
+            length_pos+=len(sent)
+        #print(lengths)
 
         for sent in sents:
             self._curLen+=len(sent)
             self._txts.append(sent)
-            if self._curLen>max_seq_length:
-                record=self._get_record()
+            if self._curLen>self.max_seq_length:
+                record=self._get_record(entities)
                 records.append(record)
 
         if self._curLen>0:
-            record=self._get_record()
+            record=self._get_record(entities)
             records.append(record)
         
-        for record in records:
-            ExampleSementer.print_record(record)
-        print("\n", "-"*50, "\n")
+        #for record in records:
+        #    ExampleSementer.print_record(record)
+        #print("\n", "-"*50, "\n")
         
         return records
 
+    def seg_single_example2(self):
+        pass
+
 def cleamCMID(file_name):
     lengths=[]
+    segger=ExampleSementer(64)
     with open(file_name, "r", encoding="utf-8") as f:
         
         with open(file_name.replace(".json", "-clean.json"), "w", encoding="utf-8") as f2:
@@ -87,14 +95,14 @@ def cleamCMID(file_name):
                 right=line.rfind("}")
                 line=line[left:right+1]
                 
-                record=json.loads(line)
-            
-                if record["entities"]:
-                    
-                    obj={"originalText":record["originalText"], "entities":record["entities"]}
-                    lengths.append(len(obj["originalText"]))
-                    #print(obj)
-                    f2.write(json.dumps(obj,ensure_ascii=False)+"\n")
+                records=segger.seg_single_exmple(json.loads(line))
+                for record in records:
+                    if record["entities"]:
+                        
+                        obj={"originalText":record["text"], "entities":record["entities"]}
+                        lengths.append(len(obj["originalText"]))
+                        #print(obj)
+                        f2.write(json.dumps(obj,ensure_ascii=False)+"\n")
         print(sorted(dict(collections.Counter(lengths)).items(),key=lambda x:x[0] ) )
 
 
@@ -107,6 +115,9 @@ def CMID2CONLLFile(file_name, folder):
 
     with open(file_name, "r") as f:
         for line in f:
+            if not line.strip():
+                continue
+            
             record=json.loads(line)
             #print(line)
             #record=json.loads(line)
@@ -167,6 +178,7 @@ def CMID2CONLLFile(file_name, folder):
     
 
 if __name__ == "__main__":
+    '''
     entities = [{"end_pos": 15, "label_type": "解剖部位", "start_pos": 14}, {"label_type": "解剖部位", "start_pos": 19, "end_pos": 20}, {"label_type": "解剖部位", "start_pos": 39, "end_pos": 40}, {"label_type": "解剖部位", "start_pos": 45, "end_pos": 46}, {"end_pos": 50, "label_type": "解剖部位", "start_pos": 48}, {"label_type": "手术", "start_pos": 58, "end_pos": 87}, {"label_type": "疾病和诊断", "start_pos": 94, "end_pos": 99}, {"label_type": "疾病和诊断", "start_pos": 103, "end_pos": 113}, {"label_type": "影像检查", "start_pos": 176, "end_pos": 178}, {"end_pos": 191, "label_type": "解剖部位", "start_pos": 180}, {"label_type": "手术", "start_pos": 249, "end_pos": 277}, {"end_pos": 292, "label_type": "解剖部位", "start_pos": 290}, {"end_pos": 298, "label_type": "解剖部位", "start_pos": 296}, {"label_type": "疾病和诊断", "start_pos": 302, "end_pos": 307}, {"end_pos": 327, "label_type": "药物", "start_pos": 325}, {"end_pos": 336, "label_type": "药物", "start_pos": 333}, {"end_pos": 362, "label_type": "解剖部位", "start_pos": 361}, {"end_pos": 365, "label_type": "解剖部位", "start_pos": 364}, {"end_pos": 396, "label_type": "解剖部位", "start_pos": 395}]
     entities=sorted(entities, key=lambda x: x["start_pos"])
     text="，患者2008年9月3日因“腹胀，发现腹部包块”在我院腹科行手术探查，术中见盆腹腔肿物，与肠管及子宫关系密切，遂行“全子宫左附件切除+盆腔肿物切除+右半结肠切除+DIXON术”，术后病理示颗粒细胞瘤，诊断为颗粒细胞瘤IIIC期，术后自2008年11月起行BEP方案化疗共4程，末次化疗时间为2009年3月26日。之后患者定期复查，2015-6-1，复查CT示：髂嵴水平上腹部L5腰椎前见软组织肿块，大小约30MM×45MM，密度欠均匀，边界尚清楚，轻度强化。查肿瘤标志物均正常。于2015-7-6行剖腹探查+膀胱旁肿物切除+骶前肿物切除+肠表面肿物切除术，术程顺利，，术后病理示：膀胱旁肿物及骶前肿物符合颗粒细胞瘤。于2015-7-13、8-14给予泰素240MG+伯尔定600MG化疗2程，过程顺利。出院至今，无发热，无腹痛、腹胀，有脱发，现返院复诊，拟行再次化疗收入院。起病以来，精神、胃纳、睡眠可，大小便正常，体重无明显改变。"
@@ -174,6 +186,8 @@ if __name__ == "__main__":
     ExampleSementer(32).seg_single_exmple({"text":text, "entities":entities})
     
     exit(-1)
+    #'''
+    
     source_file="/home/zhangzy/KnowledgeExtraction/data/ner/ner.json"
     result_folder="/home/zhangzy/KnowledgeExtraction/data/ner/splitdata"
 

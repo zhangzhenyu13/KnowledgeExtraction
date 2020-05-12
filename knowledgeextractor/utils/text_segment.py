@@ -34,3 +34,6 @@ def to_sentences(paragraph):
             sentences[j] = sentences[j][1:]
             
     return __merge_symmetry(sentences)
+
+def to_parts(paragraph):
+    sentences = re.split(r"(？|。|！|\…\…)", paragraph)
