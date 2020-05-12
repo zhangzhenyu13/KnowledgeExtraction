@@ -23,7 +23,9 @@ def __merge_symmetry(sentences, symmetry=('“','”')):
 
 def to_sentences(paragraph):
     """由段落切分成句子"""
-    sentences = re.split(r"(？|。|！|\…\…)", paragraph)
+    #sentences = re.split(r"(？|。|！|\…\…)", paragraph)
+    sentences = re.split(r"(；|，|？|。|！|\…\…)", paragraph)
+
     sentences.append("")
     sentences = ["".join(i) for i in zip(sentences[0::2], sentences[1::2])]
     sentences = [i.strip() for i in sentences if len(i.strip()) > 0]
@@ -34,6 +36,3 @@ def to_sentences(paragraph):
             sentences[j] = sentences[j][1:]
             
     return __merge_symmetry(sentences)
-
-def to_parts(paragraph):
-    sentences = re.split(r"(？|。|！|\…\…)", paragraph)

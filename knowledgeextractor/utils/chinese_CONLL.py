@@ -10,11 +10,9 @@ import tensorflow as tf
 
 # pylint: disable=invalid-name, too-many-locals
 
-MAX_CHAR_LENGTH = 45
-NUM_CHAR_PAD = 2
 
-UNK_WORD, UNK_CHAR, UNK_NER = 0, 0, 0
-PAD_WORD, PAD_CHAR, PAD_NER = 1, 1, 1
+UNK_WORD, UNK_NER = 0, 0
+PAD_WORD, PAD_NER = 1, 1
 
 # Regular expressions used to normalize digits.
 DIGIT_RE = re.compile(r"\d")

@@ -3,6 +3,7 @@ import json
 import collections
 from textblob import TextBlob
 from knowledgeextractor.utils.text_segment import to_sentences
+import re
 class ExampleSementer:
     def __init__(self, max_seq_length, key_text="originalText", key_entities="entities"):
         self.max_seq_length=max_seq_length
@@ -55,7 +56,10 @@ class ExampleSementer:
 
         lengths=[]
         length_pos=0
-        for sent in to_sentences(text):
+
+        sentences=  to_sentences(text)
+
+        for sent in sentences:
             #print(sent)
             sents.append(sent)
             lengths.append([length_pos,len(sent)])
@@ -159,7 +163,7 @@ def CMID2CONLLFile(file_name, folder):
         with open(file_name2, "w") as f:
             f.writelines(result)
 
-    dev_size=test_size= int(0.1*len(labeled_tokens))
+    dev_size=test_size= int(0.05*len(labeled_tokens))
     train, dev, test= os.path.join(folder,"train.txt"),os.path.join(folder,"dev.txt"),os.path.join(folder,"test.txt")
 
     sequence2labeledtags(labeled_tokens[:-(dev_size+test_size)], train)
@@ -183,14 +187,16 @@ if __name__ == "__main__":
     entities=sorted(entities, key=lambda x: x["start_pos"])
     text="，患者2008年9月3日因“腹胀，发现腹部包块”在我院腹科行手术探查，术中见盆腹腔肿物，与肠管及子宫关系密切，遂行“全子宫左附件切除+盆腔肿物切除+右半结肠切除+DIXON术”，术后病理示颗粒细胞瘤，诊断为颗粒细胞瘤IIIC期，术后自2008年11月起行BEP方案化疗共4程，末次化疗时间为2009年3月26日。之后患者定期复查，2015-6-1，复查CT示：髂嵴水平上腹部L5腰椎前见软组织肿块，大小约30MM×45MM，密度欠均匀，边界尚清楚，轻度强化。查肿瘤标志物均正常。于2015-7-6行剖腹探查+膀胱旁肿物切除+骶前肿物切除+肠表面肿物切除术，术程顺利，，术后病理示：膀胱旁肿物及骶前肿物符合颗粒细胞瘤。于2015-7-13、8-14给予泰素240MG+伯尔定600MG化疗2程，过程顺利。出院至今，无发热，无腹痛、腹胀，有脱发，现返院复诊，拟行再次化疗收入院。起病以来，精神、胃纳、睡眠可，大小便正常，体重无明显改变。"
     
-    ExampleSementer(32).seg_single_exmple({"text":text, "entities":entities})
+    ExampleSementer(32, key_text="text").seg_single_exmple({"text":text, "entities":entities})
     
     exit(-1)
     #'''
     
-    source_file="/home/zhangzy/KnowledgeExtraction/data/ner/ner.json"
+    source_file="/home/zhangzy/KnowledgeExtraction/data/ner/yidu7k/ner.json"
     result_folder="/home/zhangzy/KnowledgeExtraction/data/ner/splitdata"
 
     cleamCMID(source_file)
-    #CMID2CONLLFile(source_file, result_folder)
+    
+    source_file="/home/zhangzy/KnowledgeExtraction/data/ner/yidu7k/ner-clean.json"
+    CMID2CONLLFile(source_file, result_folder)
     

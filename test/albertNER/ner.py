@@ -9,9 +9,12 @@ import tensorflow as tf
 import texar.tf as tx
 
 from knowledgeextractor.utils.scores import scores
-from knowledgeextractor.utils.chinese_CONLL import (create_vocabs, read_data, iterate_batch, load_glove, 
-    construct_init_word_vecs,CoNLLWriter)
+from knowledgeextractor.utils.chinese_CONLL import (create_vocabs, read_data, iterate_batch, CoNLLWriter)
 from knowledgeextractor.utils import train_utils
+from albert.fine_tuning_utils import create_albert
+from albert.tokenization import FullTokenizer
+from albert.modeling import AlbertModel, AlbertConfig
+from albert import modeling
 
 flags = tf.flags
 
@@ -23,8 +26,10 @@ flags.DEFINE_string("dev", "eng.dev.bio.conll",
                     "the file name of the dev data.")
 flags.DEFINE_string("test", "eng.test.bio.conll",
                     "the file name of the test data.")
-flags.DEFINE_string("embedding", "glove.6B.100d.txt",
-                    "the file name of the GloVe embedding.")
+flags.DEFINE_string("checkpoint", "",
+                    "the file name of the albert checkpoint.")
+flags.DEFINE_string("albert_config", "",
+                    "the file name of the albert config file.")
 flags.DEFINE_string("config", "config", "The config to use.")
 
 FLAGS = flags.FLAGS
@@ -34,14 +39,12 @@ config = importlib.import_module(FLAGS.config)
 train_path = os.path.join(FLAGS.data_path, FLAGS.train)
 dev_path = os.path.join(FLAGS.data_path, FLAGS.dev)
 test_path = os.path.join(FLAGS.data_path, FLAGS.test)
-embedding_path = os.path.join(FLAGS.data_path, FLAGS.embedding)
-
+checkpoint_path =  FLAGS.checkpoint
+albert_config_path= FLAGS.albert_config
 # Prepares/loads data
-if config.load_glove:
-    print('loading GloVe embedding...')
-    glove_dict = load_glove(embedding_path, config.hidden_dim)
-else:
-    glove_dict = None
+vocab_file=config.vocab
+tokenizer = FullTokenizer(vocab_file)
+albert_config=AlbertConfig.from_json_file(albert_config_path)
 
 (word_vocab, ner_vocab), (i2w, i2n) = create_vocabs(train_path, dev_path, test_path, glove_dict=glove_dict)
 
@@ -51,8 +54,7 @@ data_test = read_data(test_path, word_vocab, ner_vocab)
 
 scale = np.sqrt(3.0 / config.hidden_dim)
 word_vecs = np.random.uniform(-scale, scale, [len(word_vocab), config.hidden_dim]).astype(np.float32)
-if config.load_glove:
-    word_vecs = construct_init_word_vecs(word_vocab, word_vecs, glove_dict)
+
 
 # Builds TF graph
 inputs = tf.placeholder(tf.int64, [None, None])
@@ -66,32 +68,26 @@ vocab_size = len(word_vecs)
 
 
 # Source word embedding# def get
-def embeding_inputwords(inputs):
-    src_word_embedder = tx.modules.WordEmbedder(
-        vocab_size=vocab_size, hparams=config.emb, init_value=word_vecs)
-    src_word_embeds = src_word_embedder(inputs)
-    src_word_embeds = src_word_embeds * config.hidden_dim ** 0.5
+encoder=AlbertModel(albert_config,is_training=True,input_ids=inputs, input_mask=masks)
 
-    # Position embedding (shared b/w source and target)
-    pos_embedder = tx.modules.SinusoidsPositionEmbedder(
-        position_size=config.max_seq_length,
-        hparams=config.position_embedder_hparams)
-    src_seq_len = tf.ones([tf.shape(inputs)[0]], tf.int32) * tf.shape(inputs)[1]
-    src_pos_embeds = pos_embedder(sequence_length=src_seq_len)
+tvars = tf.trainable_variables()
 
-    seq_input_embedding = src_word_embeds + src_pos_embeds
-    return seq_input_embedding
+initialized_variable_names = {}
 
-emb_inputs=embeding_inputwords(inputs)
+(assignment_map, initialized_variable_names
+) = modeling.get_assignment_map_from_checkpoint(tvars, checkpoint_path)
 
-def encode_embedings(token_embeddings, seq_lengths):
+tf.train.init_from_checkpoint(checkpoint_path, assignment_map)
 
-    encoder=tx.modules.TransformerEncoder(hparams=config.encoder)
+tf.logging.info("**** Trainable Variables ****")
+for var in tvars:
+    init_string = ""
+    if var.name in initialized_variable_names:
+        init_string = ", *INIT_FROM_CKPT*"
+    tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
+                        init_string)
 
-    outputs = encoder(token_embeddings, sequence_length=seq_lengths)
-    return outputs
-
-outputs=encode_embedings(emb_inputs, seq_lengths)
+outputs=encoder.get_sequence_output()
 
 def project_enc_layer(enc_outputs, name=None):
     """
@@ -249,6 +245,6 @@ with tf.Session() as sess:
         print('---------------------------------------------------')
         
         saver=tf.train.Saver()
-        saver.save(sess, "saved_ner_models/transformer")
+        saver.save(sess, "saved_ner_models/albert")
         print("saved model")
 
