@@ -1,0 +1,6 @@
+data
+*.egg-info
+*.pyc
+tmp
+saved_ner_models
+.vscode
