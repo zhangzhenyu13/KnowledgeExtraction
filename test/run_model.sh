@@ -15,12 +15,12 @@ elif [ $model_select = 2 ]; then
    --dev /home/zhangzy/KnowledgeExtraction/data/ner/splitdata/dev.txt \
    --test /home/zhangzy/KnowledgeExtraction/data/ner/splitdata/test.txt 
 elif [ $model_select = 3 ]; then
-   python /home/zhangzy/KnowledgeExtraction/test/transformerNER/ner.py \
+   python /home/zhangzy/KnowledgeExtraction/test/albertNER/ner.py \
    --data_path /home/zhangzy/KnowledgeExtraction/data/ner/splitdata/ \
    --train /home/zhangzy/KnowledgeExtraction/data/ner/splitdata/train.txt \
    --dev /home/zhangzy/KnowledgeExtraction/data/ner/splitdata/dev.txt \
    --test /home/zhangzy/KnowledgeExtraction/data/ner/splitdata/test.txt \
-   --checkpoint /home/zhangzy/KnowledgeExtraction/data/models/albert_base_zh/model \
+   --checkpoint /home/zhangzy/KnowledgeExtraction/data/models/albert_base_zh/model.ckpt-best \
    --albert_config  /home/zhangzy/KnowledgeExtraction/data/models/albert_base_zh/config.json 
 
 fi

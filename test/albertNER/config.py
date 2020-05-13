@@ -1,51 +1,16 @@
 import texar.tf as tx
 num_epochs = 50
-#preserved useless, for transformer
-load_glove = False
+vocab = "/home/zhangzy/KnowledgeExtraction/data/models/albert_base_zh/vocab_chinese.txt"
+label="/home/zhangzy/KnowledgeExtraction/data/ner/splitdata/labels.txt"
 #data
-tag_space=128
-hidden_dim=256
+tag_space=768
+hidden_dim=768
 keep_prob = 0.5
 batch_size = 16
 encoder = None
 max_seq_length=256
 
-emb = {
-    'name': 'lookup_table',
-    'dim': hidden_dim,
-    'initializer': {
-        'type': 'random_normal_initializer',
-        'kwargs': {
-            'mean': 0.0,
-            'stddev': hidden_dim**-0.5,
-        },
-    }
-}
 
-position_embedder_hparams = {
-    'dim': hidden_dim,
-    #'cache_embeddings': False
-}
-
-encoder = {
-    'dim': hidden_dim,
-    'num_blocks': 6,
-    'multihead_attention': {
-        'num_heads': 8,
-        'output_dim': hidden_dim
-        # See documentation for more optional hyperparameters
-    },
-    'initializer': {
-        'type': 'variance_scaling_initializer',
-        'kwargs': {
-            'scale': 1.0,
-            'mode': 'fan_avg',
-            'distribution': 'uniform',
-        },
-    },
-    'poswise_feedforward': tx.modules.default_transformer_poswise_net_hparams(
-        output_dim=hidden_dim)
-}
 
 opt = {
     'optimizer': {

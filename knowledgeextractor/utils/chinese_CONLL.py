@@ -9,24 +9,44 @@ import tensorflow as tf
 
 
 # pylint: disable=invalid-name, too-many-locals
+BERT_MODE=1 # 0 for not use, 1 for use ALBERT
 
-
-UNK_WORD, UNK_NER = 0, 0
-PAD_WORD, PAD_NER = 1, 1
+UNK_WORD, UNK_NER = 100, 0
+PAD_WORD, PAD_NER = 0, 1
 
 # Regular expressions used to normalize digits.
 DIGIT_RE = re.compile(r"\d")
 
+def create_vocabs_from_vocab_file(vocabs_file, labels_file):
+    from albert.tokenization import FullTokenizer
+    ner_vocab = defaultdict(lambda: len(ner_vocab))
+    UNK_NER = ner_vocab["[UNK]"]
+    PAD_NER = ner_vocab["[PAD]"]
+    
+    with open(labels_file, "r", encoding="utf-8") as f:
+        for label in f:
+            if label.strip():
+                nid=ner_vocab[label.strip()]
+        ner_vocab = defaultdict(lambda: UNK_NER, ner_vocab)
 
-def create_vocabs(train_path, dev_path, test_path, normalize_digits=True, min_occur=1, glove_dict=None):
+    tokenizer = FullTokenizer(vocabs_file)
+    word_vocab=tokenizer.vocab
+    word_vocab=defaultdict(lambda: UNK_WORD, word_vocab)
+    i2w=tokenizer.inv_vocab
+    #i2w = {v: k for k, v in word_vocab.items()}
+    i2n = {v: k for k, v in ner_vocab.items()}
+    
+    return (word_vocab, ner_vocab), (i2w, i2n)
+
+def create_vocabs(train_path, dev_path, test_path, normalize_digits=True, min_occur=1):
     word_vocab = defaultdict(lambda: len(word_vocab))
     word_count = defaultdict(lambda: 0)
     ner_vocab = defaultdict(lambda: len(ner_vocab))
 
-    UNK_WORD = word_vocab["<unk>"]
-    PAD_WORD = word_vocab["<pad>"]
-    UNK_NER = ner_vocab["<unk>"]
-    PAD_NER = ner_vocab["<pad>"]
+    UNK_WORD = word_vocab["[UNK]"]
+    PAD_WORD = word_vocab["[PAD]"]
+    UNK_NER = ner_vocab["[UNK]"]
+    PAD_NER = ner_vocab["[PAD]"]
 
     print("Creating Vocabularies:")
 
@@ -41,9 +61,8 @@ def create_vocabs(train_path, dev_path, test_path, normalize_digits=True, min_oc
                 word = DIGIT_RE.sub("0", tokens[0]) if normalize_digits else tokens[0]
                 ner = tokens[-1]
 
-                if glove_dict is not None and (word in glove_dict or word.lower() in glove_dict):
-                    word_count[word] += min_occur + 1
-                elif file_path == train_path:
+                
+                if file_path == train_path:
                     word_count[word] += 1
 
                 nid = ner_vocab[ner]
@@ -76,7 +95,13 @@ def read_data(source_path, word_vocab, ner_vocab, normalize_digits=True, max_seq
     while inst is not None:
         counter += 1
         sent = inst.sentence
-        data.append([sent.word_ids,  inst.ner_ids])
+        wids=sent.word_ids
+        nids=sent.ner_ids
+        if BERT_MODE==1:
+            wids=[word_vocab["CLS"]]+wids[:max_seq_length-1]+[word_vocab["SEP"]]
+            nids=["O"]+nids[:max_seq_length-1]+["O"]
+        
+        data.append([wids,  nids])
         inst = reader.nextParagraphNerInst(normalize_digits, max_seq_length)
 
     reader.close()

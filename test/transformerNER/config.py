@@ -1,6 +1,7 @@
 import texar.tf as tx
 num_epochs = 50
-vocab = "/home/zhangzy/KnowledgeExtraction/data/models/albert_base_zh/vocab_chinese.txt"
+load_glove = False
+
 #data
 tag_space=128
 hidden_dim=256

@@ -9,13 +9,15 @@ import tensorflow as tf
 import texar.tf as tx
 
 from knowledgeextractor.utils.scores import scores
-from knowledgeextractor.utils.chinese_CONLL import (create_vocabs, read_data, iterate_batch, CoNLLWriter)
+from knowledgeextractor.utils.chinese_CONLL import (create_vocabs, create_vocabs_from_vocab_file, \
+    read_data, iterate_batch, CoNLLWriter)
 from knowledgeextractor.utils import train_utils
 from albert.fine_tuning_utils import create_albert
 from albert.tokenization import FullTokenizer
 from albert.modeling import AlbertModel, AlbertConfig
 from albert import modeling
-
+import logging
+logging.getLogger().setLevel(logging.INFO)
 flags = tf.flags
 
 flags.DEFINE_string("data_path", "./data",
@@ -26,10 +28,12 @@ flags.DEFINE_string("dev", "eng.dev.bio.conll",
                     "the file name of the dev data.")
 flags.DEFINE_string("test", "eng.test.bio.conll",
                     "the file name of the test data.")
-flags.DEFINE_string("checkpoint", "",
+flags.DEFINE_string("checkpoint", "path_to_checkpoint",
                     "the file name of the albert checkpoint.")
+
 flags.DEFINE_string("albert_config", "",
                     "the file name of the albert config file.")
+
 flags.DEFINE_string("config", "config", "The config to use.")
 
 FLAGS = flags.FLAGS
@@ -43,17 +47,17 @@ checkpoint_path =  FLAGS.checkpoint
 albert_config_path= FLAGS.albert_config
 # Prepares/loads data
 vocab_file=config.vocab
-tokenizer = FullTokenizer(vocab_file)
+label_file=config.label
 albert_config=AlbertConfig.from_json_file(albert_config_path)
 
-(word_vocab, ner_vocab), (i2w, i2n) = create_vocabs(train_path, dev_path, test_path, glove_dict=glove_dict)
+(word_vocab, ner_vocab), (i2w, i2n) = create_vocabs_from_vocab_file(vocab_file, label_file)
+#(word_vocab, ner_vocab), (i2w, i2n) = create_vocabs(train_path, dev_path, test_path)
 
 data_train = read_data(train_path, word_vocab, ner_vocab)
 data_dev = read_data(dev_path, word_vocab, ner_vocab)
 data_test = read_data(test_path, word_vocab, ner_vocab)
 
-scale = np.sqrt(3.0 / config.hidden_dim)
-word_vecs = np.random.uniform(-scale, scale, [len(word_vocab), config.hidden_dim]).astype(np.float32)
+
 
 
 # Builds TF graph
@@ -64,7 +68,7 @@ seq_lengths = tf.placeholder(tf.int64, [None])
 
 learning_rate = tf.placeholder(tf.float64, shape=(), name='lr')
 
-vocab_size = len(word_vecs)
+vocab_size = len(word_vocab)
 
 
 # Source word embedding# def get
