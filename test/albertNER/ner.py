@@ -7,7 +7,7 @@ import importlib
 import numpy as np
 import tensorflow as tf
 import texar.tf as tx
-
+from albert.lamb_optimizer import LAMBOptimizer
 from knowledgeextractor.utils.scores import scores
 from knowledgeextractor.utils.chinese_CONLL import (create_vocabs, create_vocabs_from_vocab_file, \
     read_data, iterate_batch, CoNLLWriter)
@@ -66,30 +66,12 @@ targets = tf.placeholder(tf.int64, [None, None])
 masks = tf.placeholder(tf.float32, [None, None])
 seq_lengths = tf.placeholder(tf.int64, [None])
 
-learning_rate = tf.placeholder(tf.float64, shape=(), name='lr')
 
 vocab_size = len(word_vocab)
 
 
 # Source word embedding# def get
 encoder=AlbertModel(albert_config,is_training=True,input_ids=inputs, input_mask=masks)
-
-tvars = tf.trainable_variables()
-
-initialized_variable_names = {}
-
-(assignment_map, initialized_variable_names
-) = modeling.get_assignment_map_from_checkpoint(tvars, checkpoint_path)
-
-tf.train.init_from_checkpoint(checkpoint_path, assignment_map)
-
-tf.logging.info("**** Trainable Variables ****")
-for var in tvars:
-    init_string = ""
-    if var.name in initialized_variable_names:
-        init_string = ", *INIT_FROM_CKPT*"
-    tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
-                        init_string)
 
 outputs=encoder.get_sequence_output()
 
@@ -145,11 +127,38 @@ mle_loss = tx.losses.sequence_sparse_softmax_cross_entropy(
 predicts = tf.argmax(logits, axis=2)
 corrects = tf.reduce_sum(tf.cast(tf.equal(targets, predicts), tf.float32) * masks)
 
+
+
 global_step = tf.placeholder(tf.int32)
-train_op = tx.core.get_train_op(
-    crf_loss, global_step=global_step, increment_global_step=False,
+
+init_lr=1e-3
+poly_power=1.0
+learning_rate = tf.constant(value=init_lr, shape=[], dtype=tf.float32)
+num_train_steps=config.num_epochs*len(data_train)//config.batch_size
+# Implements linear decay of the learning rate.
+learning_rate = tf.train.polynomial_decay(
+    learning_rate,
+    global_step,
+    num_train_steps,
+    end_learning_rate=0.0,
+    power=poly_power,
+    cycle=False)
+optimizer=LAMBOptimizer(
     learning_rate=learning_rate,
-    hparams=config.opt)
+    weight_decay_rate=0.01,
+        beta_1=0.9,
+        beta_2=0.999,
+        epsilon=1e-6,
+        exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"]
+        )
+
+train_op = tx.core.get_train_op(
+    crf_loss, global_step=global_step, 
+    increment_global_step=False,
+    optimizer=optimizer,
+    #learning_rate=learning_rate,
+    #hparams=config.opt
+    )
 
 # Training/eval processes
 
@@ -214,10 +223,32 @@ def _eval(sess, epoch, data_tag):
     return acc, precision, recall, f1
 
 
+#load checkpoint
+tvars = tf.trainable_variables()
+initialized_variable_names = {}
+
+(assignment_map, initialized_variable_names
+) = modeling.get_assignment_map_from_checkpoint(tvars, checkpoint_path)
+
+tf.train.init_from_checkpoint(checkpoint_path, assignment_map)
+
+logging.info("**** Trainable Variables ****")
+for var in tvars:
+    init_string = ""
+    if var.name in initialized_variable_names:
+        init_string = ", *INIT_FROM_CKPT*"
+    logging.info("  name = %s, shape = %s%s", var.name, var.shape,
+                        init_string)
+    print( "  name = %s, shape = %s%s", var.name, var.shape,
+                        init_string)
+
+print("checkpoint loaded")
+
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     sess.run(tf.local_variables_initializer())
     sess.run(tf.tables_initializer())
+    
 
     dev_f1 = 0.0
     dev_acc = 0.0

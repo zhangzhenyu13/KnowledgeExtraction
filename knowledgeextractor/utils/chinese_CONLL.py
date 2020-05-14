@@ -35,7 +35,10 @@ def create_vocabs_from_vocab_file(vocabs_file, labels_file):
     i2w=tokenizer.inv_vocab
     #i2w = {v: k for k, v in word_vocab.items()}
     i2n = {v: k for k, v in ner_vocab.items()}
-    
+    print("loaded vocabs from vocab file and label file")
+    print("Word Vocabulary Size: %d" % len(word_vocab))
+    print("NER Alphabet Size: %d" % len(ner_vocab))
+
     return (word_vocab, ner_vocab), (i2w, i2n)
 
 def create_vocabs(train_path, dev_path, test_path, normalize_digits=True, min_occur=1):
@@ -96,10 +99,10 @@ def read_data(source_path, word_vocab, ner_vocab, normalize_digits=True, max_seq
         counter += 1
         sent = inst.sentence
         wids=sent.word_ids
-        nids=sent.ner_ids
+        nids=inst.ner_ids
         if BERT_MODE==1:
             wids=[word_vocab["CLS"]]+wids[:max_seq_length-1]+[word_vocab["SEP"]]
-            nids=["O"]+nids[:max_seq_length-1]+["O"]
+            nids=[ner_vocab["O"]]+nids[:max_seq_length-1]+[ner_vocab["O"]]
         
         data.append([wids,  nids])
         inst = reader.nextParagraphNerInst(normalize_digits, max_seq_length)
