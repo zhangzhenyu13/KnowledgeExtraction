@@ -169,7 +169,7 @@ def _train_epoch(sess, epoch, step):
     num_tokens = 0.
 
     fetches = {
-        "mle_loss": mle_loss,
+        "mle_loss": crf_loss,
         "correct": corrects,
     }
     fetches["train_op"] = train_op
