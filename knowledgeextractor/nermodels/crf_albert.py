@@ -9,7 +9,8 @@ from albert import fine_tuning_utils
 from albert import modeling
 from albert import optimization
 from albert import tokenization
-import tensorflow.compat.v1 as tf
+#import tensorflow.compat.v1 as tf
+import tensorflow as tf
 from tensorflow import contrib as tf_contrib
 from tensorflow.contrib import data as contrib_data
 from tensorflow.contrib import metrics as contrib_metrics
@@ -17,7 +18,7 @@ from tensorflow.contrib import tpu as contrib_tpu
 from tensorflow.contrib import cluster_resolver as contrib_cluster_resolver
 from albert import classifier_utils
 from knowledgeextractor import KGEConfig
-from knowledgeextractor.utils import text_processor
+from knowledgeextractor.utils import crf_processor
 
 def model_fn_builder(albert_config, num_labels, init_checkpoint, learning_rate,
                      num_train_steps, num_warmup_steps, use_tpu,
@@ -168,16 +169,19 @@ def create_model(albert_config, is_training, input_ids, input_mask, segment_ids,
             :param project_logits: [1, num_steps, num_tags]
             :return: scalar loss
             """
+            #'''
             trans = tf.get_variable(
                     "transitions",
                     shape=[num_labels, num_labels],
                     initializer=tf_contrib.layers.xavier_initializer())
-
+            #'''
+            lengths=tf.reduce_sum(input_mask, axis=-1)
             log_likelihood, trans = tf.contrib.crf.crf_log_likelihood(
                 inputs=logits,
                 tag_indices=labels,
                 transition_params=trans,
-                sequence_lengths=albert_config.max_position_embeddings)
+                sequence_lengths=lengths
+                )
 
             loss = tf.reduce_mean(-log_likelihood)
 
@@ -192,7 +196,7 @@ class NERModel(object):
     def __init__(self, config_file):
         self.config=KGEConfig(config_file)
         self.batch_size=self.config.predict_batch_size
-        self.processor=text_processor.SquenceLabelingTextProcessor(self.config.processor)
+        self.processor=crf_processor.SquenceLabelingTextProcessor(self.config.processor)
 
         tpu_cluster_resolver = None
         if self.config.use_tpu and self.config.tpu_name:
@@ -232,15 +236,16 @@ class NERModel(object):
             use_one_hot_embeddings=self.config.use_tpu,
             task_name="",
             hub_module=self.config.albert_hub_module_handle,
-            optimizer=self.config.optimizer)
+            #optimizer=self.config.optimizer
+            )
         
         self.estimator = contrib_tpu.TPUEstimator(
             model_dir=self.config.output_dir,
             use_tpu=self.config.use_tpu,
             model_fn=model_fn,
             config=run_config,
-            train_batch_size=self.config.train_batch_size,
-            eval_batch_size=self.config.eval_batch_size,
+            #train_batch_size=self.config.train_batch_size,
+            #eval_batch_size=self.config.eval_batch_size,
             predict_batch_size=self.config.predict_batch_size)
 
     
@@ -265,7 +270,7 @@ class NERModel(object):
         tf.logging.info("  Batch size = %d", self.config.predict_batch_size)
 
         predict_drop_remainder = True if self.config.use_tpu else False
-        predict_input_fn = text_processor.data_based_input_fn_builder(
+        predict_input_fn = crf_processor.data_based_input_fn_builder(
             features=predict_features,
             seq_length=self.config.max_seq_length,
             is_training=False,
@@ -281,7 +286,7 @@ class NERModel(object):
 
 def test_init(*argv):
     global nm
-    nm=NERModel("/home/zhangzy/KnowledgeExtraction/config/ner_albert_model.json")
+    nm=NERModel("/home/zhangzy/KnowledgeExtraction/config/crf_albert_model.json")
     print("*"*100)
 def test_predict(*args):
     
@@ -291,17 +296,25 @@ def test_predict(*args):
     print(res)
     for re in res:
         print(re)
-        print(nm.processor.convert_ids_labels([int(rid) for rid in re["predictions"]]) )
         res2.append(re)
     print("_"*100)
 
     return res2
+
+
+
 if __name__ == "__main__":
     query_data={
         "guid":"test1",
         "text":"this is just a test snippet!"
     }
+    
     test_init()
     res=test_predict([query_data])
-    test_predict([query_data]*2)
-    print(res)
+    predictions=res[0]["predictions"]
+    feature=nm.processor.processText(query_data)
+    inputids=feature.input_ids
+    words, labels= nm.processor.recover_token_tags(predictions,inputids)
+
+    print(words)
+    print(labels)

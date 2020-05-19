@@ -1,7 +1,7 @@
 import os
 import json
 import collections
-from textblob import TextBlob
+#from textblob import TextBlob
 from knowledgeextractor.utils.text_segment import to_sentences
 import re
 class ExampleSementer:
@@ -47,6 +47,9 @@ class ExampleSementer:
         return record
     
     def seg_single_exmple(self, record):
+        # senetence centered segmentation
+        # split sentences into records with 
+        # each record containing several sents and coresponding entities
         entities=record[self.key_entities]
         text=record[self.key_text]
         sents=[]
@@ -83,12 +86,45 @@ class ExampleSementer:
         
         return records
 
-    def seg_single_example2(self):
-        pass
+    def label_and_seg_single_exmple(self, record):
+        # label the example and then seg it into several records
+        entities=record[self.key_entities]
+        text=record[self.key_text]
+        sequence=[[word, "O"] for word in text]
+        nested=0
+        labels=set()
 
-def cleamCMID(file_name):
+        for entity in entities:
+            s, e= entity["start_pos"], entity["end_pos"]
+            label=entity["label_type"]      
+            labels.add(label+"-B")
+            labels.add(label+"-I")      
+            for i in range(s, e):
+                if sequence[i][0][-1]=="I":
+                    nested+=1
+
+                sequence[i]=(sequence[i][0], label+"-I")
+                if i==s:
+                    sequence[i]=(sequence[i][0], label+"-B")
+        stride=self.max_seq_length//2
+        start=0
+        records=[]
+        while start<len(sequence):
+            records.append(sequence[start:start+self.max_seq_length] )
+            start+=stride
+        records=map(lambda record: 
+            {
+                "text": "".join([w for w,_ in record]),
+                "token_labels": [t for _,t in record]
+            }, 
+            records
+        )
+        #records=list(records)
+        return records, labels
+
+def cleamCMID(file_name,max_seq_len):
     lengths=[]
-    segger=ExampleSementer(64)
+    segger=ExampleSementer(max_seq_len)
     with open(file_name, "r", encoding="utf-8") as f:
         
         with open(file_name.replace(".json", "-clean.json"), "w", encoding="utf-8") as f2:
@@ -179,8 +215,36 @@ def CMID2CONLLFile(file_name, folder):
         f.writelines("\n".join(labels))
 
 
-    
+def QueryStyleFile(file_name, cat_filter=None):
+    lengths=[]
+    labels=set()
+    segger=ExampleSementer(max_seq_length)
+    with open(file_name, "r", encoding="utf-8") as f:
+        with open(file_name.replace(".json", "-seg.json"), "w", encoding="utf-8") as f2:
+            for line in f:
+                if not line.strip():
+                    continue
+                left=line.find("{")
+                right=line.rfind("}")
+                line=line[left:right+1]
+                
+                records, labels1=segger.label_and_seg_single_exmple(json.loads(line))
+                labels=labels|labels1
 
+                for record in records:
+                    tags=record["token_labels"]
+                    if cat_filter:
+                        i=0
+                        while i<len(tags):
+                            if not tags[i].startswith(cat_filter):
+                                tags[i]="O"
+                            i+=1
+                    f2.write(json.dumps(record,ensure_ascii=False)+"\n")
+        print(sorted(dict(collections.Counter(lengths)).items(),key=lambda x:x[0] ) )
+        print(labels)
+        #labels=list(labels)
+        with open(file_name.replace(".json", ".label"), "w", encoding="utf-8") as f:
+            f.write("\n".join(labels))
 if __name__ == "__main__":
     '''
     entities = [{"end_pos": 15, "label_type": "解剖部位", "start_pos": 14}, {"label_type": "解剖部位", "start_pos": 19, "end_pos": 20}, {"label_type": "解剖部位", "start_pos": 39, "end_pos": 40}, {"label_type": "解剖部位", "start_pos": 45, "end_pos": 46}, {"end_pos": 50, "label_type": "解剖部位", "start_pos": 48}, {"label_type": "手术", "start_pos": 58, "end_pos": 87}, {"label_type": "疾病和诊断", "start_pos": 94, "end_pos": 99}, {"label_type": "疾病和诊断", "start_pos": 103, "end_pos": 113}, {"label_type": "影像检查", "start_pos": 176, "end_pos": 178}, {"end_pos": 191, "label_type": "解剖部位", "start_pos": 180}, {"label_type": "手术", "start_pos": 249, "end_pos": 277}, {"end_pos": 292, "label_type": "解剖部位", "start_pos": 290}, {"end_pos": 298, "label_type": "解剖部位", "start_pos": 296}, {"label_type": "疾病和诊断", "start_pos": 302, "end_pos": 307}, {"end_pos": 327, "label_type": "药物", "start_pos": 325}, {"end_pos": 336, "label_type": "药物", "start_pos": 333}, {"end_pos": 362, "label_type": "解剖部位", "start_pos": 361}, {"end_pos": 365, "label_type": "解剖部位", "start_pos": 364}, {"end_pos": 396, "label_type": "解剖部位", "start_pos": 395}]
@@ -192,11 +256,13 @@ if __name__ == "__main__":
     exit(-1)
     #'''
     
-    source_file="/home/zhangzy/KnowledgeExtraction/data/ner/yidu7k/ner.json"
-    result_folder="/home/zhangzy/KnowledgeExtraction/data/ner/splitdata"
+    max_seq_length=128
+    source_file="/home/zhangzy/nlpdata/CRF/data.json"
+    result_folder="/home/zhangzy/nlpdata/CRF"
 
-    cleamCMID(source_file)
+    QueryStyleFile(source_file)
+    #cleamCMID(source_file,max_seq_length)
     
-    source_file="/home/zhangzy/KnowledgeExtraction/data/ner/yidu7k/ner-clean.json"
-    CMID2CONLLFile(source_file, result_folder)
+    #source_file="/home/zhangzy/KnowledgeExtraction/data/ner/yidu7k/ner-clean.json"
+    #CMID2CONLLFile(source_file, result_folder)
     

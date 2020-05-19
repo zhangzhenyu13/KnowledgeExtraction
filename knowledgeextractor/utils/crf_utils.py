@@ -28,7 +28,9 @@ class InputExample(object):
     """
     self.guid = guid
     self.text = text
-    self.token_labels = ["O"]* len(self.text)
+    self.token_labels=token_labels
+    if self.token_labels is None:
+        self.token_labels = ["O"]* 20
 
 
 class PaddingInputExample(object):
@@ -66,7 +68,7 @@ class InputFeatures(object):
 def convert_single_example(ex_index, example, label_list, max_seq_length,
                            tokenizer):
     """Converts a single `InputExample` into a single `InputFeatures`."""
-    piece_prefix="_"
+    piece_prefix="##"
     if isinstance(example, PaddingInputExample):
         return InputFeatures(
             input_ids=[0] * max_seq_length,
@@ -114,7 +116,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     
     for token in tokens[1:]:
         segment_ids.append(0)
-        if token==piece_prefix or token.startswith(piece_prefix): # a new token rather than pieces
+        if not token.startswith(piece_prefix): # a new token rather than pieces
             label_id=label_map[next(it)]
         label_ids.append(label_id)
 
@@ -129,14 +131,14 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     # tokens are attended to.
     input_mask = [1] * len(input_ids)
 
-    print(len(input_ids), len(input_mask), len(segment_ids), len(label_ids))
+    #print(len(input_ids), len(input_mask), len(segment_ids), len(label_ids))
     # Zero-pad up to the sequence length.
     while len(input_ids) < max_seq_length:
         input_ids.append(0)
         input_mask.append(0)
         segment_ids.append(0)
         label_ids.append(label_map["O"])
-    print(len(input_ids), len(input_mask), len(segment_ids), len(label_ids))
+    #print(len(input_ids), len(input_mask), len(segment_ids), len(label_ids))
 
     assert len(input_ids) == max_seq_length
     assert len(input_mask) == max_seq_length
