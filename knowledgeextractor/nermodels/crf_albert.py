@@ -80,12 +80,17 @@ def model_fn_builder(albert_config, num_labels, init_checkpoint, learning_rate,
             train_op = optimization.create_optimizer(
                 total_loss, learning_rate, num_train_steps, num_warmup_steps,
                 use_tpu, optimizer)
-
+            '''
             output_spec = contrib_tpu.TPUEstimatorSpec(
                 mode=mode,
                 loss=total_loss,
                 train_op=train_op,
                 scaffold_fn=scaffold_fn)
+            '''
+            output_spec = tf.estimator.EstimatorSpec(
+                mode=mode,
+                loss=total_loss,
+                train_op=train_op) 
 
         elif mode == tf.estimator.ModeKeys.EVAL:
             def metric_fn(per_example_loss, label_ids, logits, is_real_example):
@@ -99,7 +104,7 @@ def model_fn_builder(albert_config, num_labels, init_checkpoint, learning_rate,
                     "eval_accuracy": accuracy,
                     "eval_loss": loss,
                 }
-        
+            '''
             eval_metrics = (metric_fn,
                             [per_example_loss, label_ids, logits, is_real_example])
             output_spec = contrib_tpu.TPUEstimatorSpec(
@@ -107,7 +112,15 @@ def model_fn_builder(albert_config, num_labels, init_checkpoint, learning_rate,
                 loss=total_loss,
                 eval_metrics=eval_metrics,
                 scaffold_fn=scaffold_fn)
+            '''
+            eval_metrics = metric_fn(per_example_loss, label_ids, logits, is_real_example)
+            output_spec = tf.estimator.EstimatorSpec(
+                mode=mode,
+                loss=total_loss,
+                eval_metric_ops=eval_metrics) 
+            
         else:
+            '''
             output_spec = contrib_tpu.TPUEstimatorSpec(
                 mode=mode,
                 predictions={
@@ -115,6 +128,14 @@ def model_fn_builder(albert_config, num_labels, init_checkpoint, learning_rate,
                     "predictions": predictions
                 },
                 scaffold_fn=scaffold_fn)
+            '''
+            output_spec = tf.estimator.EstimatorSpec(
+                mode=mode,
+                predictions={
+                    "probabilities": probabilities,
+                    "predictions": predictions
+                }
+            )
         return output_spec
 
     return model_fn
@@ -198,6 +219,7 @@ class NERModel(object):
         self.batch_size=self.config.predict_batch_size
         self.processor=crf_processor.SquenceLabelingTextProcessor(self.config.processor)
 
+        '''
         tpu_cluster_resolver = None
         if self.config.use_tpu and self.config.tpu_name:
             tpu_cluster_resolver = contrib_cluster_resolver.TPUClusterResolver(
@@ -215,7 +237,8 @@ class NERModel(object):
             #    num_shards=self.config.num_tpu_cores,
             #    per_host_input_for_training=is_per_host)
             )
-        
+        '''
+
         albert_config = modeling.AlbertConfig.from_json_file(
             self.config.albert_config_file)
         if self.config.max_seq_length > albert_config.max_position_embeddings:
@@ -224,7 +247,6 @@ class NERModel(object):
                 "was only trained up to sequence length %d" %
                 (self.config.max_seq_length, albert_config.max_position_embeddings))
         
-        #self.sess=tf.Session("ner_predict")
         model_fn = model_fn_builder(
             albert_config=albert_config,
             num_labels=self.config.num_labels,
@@ -238,7 +260,7 @@ class NERModel(object):
             hub_module=self.config.albert_hub_module_handle,
             #optimizer=self.config.optimizer
             )
-        
+        '''
         self.estimator = contrib_tpu.TPUEstimator(
             model_dir=self.config.output_dir,
             use_tpu=self.config.use_tpu,
@@ -247,7 +269,19 @@ class NERModel(object):
             #train_batch_size=self.config.train_batch_size,
             #eval_batch_size=self.config.eval_batch_size,
             predict_batch_size=self.config.predict_batch_size)
-
+        '''
+        config = tf.ConfigProto(
+            allow_soft_placement=True,log_device_placement=True,
+            gpu_options={"allow_growth":self.config.use_gpu})
+        
+        run_config = tf.estimator.RunConfig(
+            session_config=config,
+            model_dir=self.config.output_dir)        
+        
+        self.estimator= tf.estimator.Estimator(
+            model_fn=model_fn, model_dir=self.config.output_dir,
+            config=run_config, params={"batch_size":self.config.predict_batch_size}
+        )
     
 
     def predict(self, query_data_list):

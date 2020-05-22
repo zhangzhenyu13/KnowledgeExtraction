@@ -10,7 +10,7 @@
     "max_query_length":64,
     "train_batch_size": 32,
     "predict_batch_size": 8,    
-    "n_best_size": 2,
+    "n_best_size": 20,
     "max_answer_length": 30,
     "use_tpu": false,
     "tpu_name": null,
@@ -20,5 +20,6 @@
     "num_tpu_cores": 8,
     "start_n_top": 5,
     "end_n_top": 5,
-    "dropout_prob": 0.1
+    "dropout_prob": 0.1,
+    "debug":false
 }

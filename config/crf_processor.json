@@ -3,5 +3,5 @@
     "query_length":64,
     "max_sequence_length":512,
     "doc_stride":64,
-    "label_list":["B", "I", "O"]
+    "label_list":"/home/zhangzy/nlpdata/CRF/labels"
 }

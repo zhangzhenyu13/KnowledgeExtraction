@@ -24,7 +24,7 @@ class NERModel(object):
     def __init__(self, config_file):
         self.config=KGEConfig(config_file)
         self.processor=MRCTextProcessor(self.config.processor)
-        self.debug=False
+        self.debug=self.config.debug
         FLAGS=self.config
 
         albert_config = modeling.AlbertConfig.from_json_file(FLAGS.albert_config_file)
@@ -164,6 +164,13 @@ def test():
     print("**100")
     print()
 
+def run():
+    nm=NERModel("/home/zhangzy/KnowledgeExtraction/config/mrc_albert_model.json")
+    all_nbest_json =nm.predict([query_data])
+    print("*"*100)
+    print(all_nbest_json)
+    print("*"*100)
+    print()
 
 if __name__ == "__main__":
     query_data={
@@ -172,7 +179,8 @@ if __name__ == "__main__":
         "id": 9987
     }
 
-    test()
-
+    #test()
+    
+    run()
 
 

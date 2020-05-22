@@ -70,11 +70,22 @@ class SquenceLabelingTextProcessor(TextProcessor):
         self.tokenizer=tokenization.FullTokenizer( config.vocab )
         self.max_sequence_length=config.max_sequence_length
         self.doc_stride=config.doc_stride
-        self.label_list=list(config.label_list)
+        if config.label_list and type(config.label_list)==list:
+          self.label_list=list(config.label_list)
+        else:
+          self.label_list=[]
+          with open(config.label_list, "r", encoding="utf-8") as f:
+            for line in f:
+              if line and line.strip():
+                self.label_list.append(line.strip())
+
         self.label_map={label:index for index, label in enumerate(self.label_list)}
         self.inv_label_map={v:k for k, v in self.label_map.items()}
         self.piece_prefix="##"
-    
+        #print(self.label_list)
+        #print(self.label_map)
+        #print(self.inv_label_map)
+
     def recoverText(self, tokens,labels):
         # tokens are [CLS] tok1, tok2, ... [SEP] [PAD] [PAD] ...
         # extract the part marked as tokN
@@ -100,7 +111,7 @@ class SquenceLabelingTextProcessor(TextProcessor):
 
     def recover_token_tags(self, label_ids, input_ids):
         labels=[]
-        print("inv label map", self.inv_label_map)
+        #print("inv label map", self.inv_label_map)
         for label_id in label_ids:
             labels.append(self.inv_label_map[label_id])
         

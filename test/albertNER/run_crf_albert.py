@@ -23,7 +23,8 @@ import time
 from albert import classifier_utils
 from albert import fine_tuning_utils
 from albert import modeling
-import tensorflow.compat.v1 as tf
+#import tensorflow.compat.v1 as tf
+import tensorflow as tf
 from tensorflow.contrib import cluster_resolver as contrib_cluster_resolver
 from tensorflow.contrib import tpu as contrib_tpu
 from knowledgeextractor.nermodels import crf_albert
@@ -114,6 +115,7 @@ flags.DEFINE_integer("keep_checkpoint_max", 5,
 flags.DEFINE_integer("iterations_per_loop", 1000,
                      "How many steps to make in each estimator call.")
 
+flags.DEFINE_bool("use_gpu", False, "Whether to use GPU/CPU.")
 flags.DEFINE_bool("use_tpu", False, "Whether to use TPU or GPU/CPU.")
 
 flags.DEFINE_string("optimizer", "lamb", "Optimizer to use: lamb/ adamw")
@@ -191,6 +193,7 @@ def main(_):
                                   FLAGS.save_checkpoints_steps))
   else:
     iterations_per_loop = FLAGS.iterations_per_loop
+  '''  
   run_config = contrib_tpu.RunConfig(
       cluster=tpu_cluster_resolver,
       master=FLAGS.master,
@@ -201,6 +204,18 @@ def main(_):
           iterations_per_loop=iterations_per_loop,
           num_shards=FLAGS.num_tpu_cores,
           per_host_input_for_training=is_per_host))
+  '''
+  # construct estimator
+  tf.logging.info("load estimator ...")
+  config = tf.ConfigProto(
+    allow_soft_placement=True,log_device_placement=True,gpu_options={"allow_growth":FLAGS.use_gpu})
+    #config.gpu_options.allow_growth = True 
+    #config.gpu_options.per_process_gpu_memory_fraction = 0.99
+
+  run_config = tf.estimator.RunConfig(
+      session_config=config,
+      model_dir=FLAGS.output_dir,
+      save_checkpoints_steps=FLAGS.save_checkpoints_steps) 
 
   train_examples = None
   if FLAGS.do_train:
@@ -218,7 +233,7 @@ def main(_):
       hub_module=FLAGS.albert_hub_module_handle,
       optimizer=FLAGS.optimizer)
 
-  # If TPU is not available, this will fall back to normal Estimator on CPU
+  '''# If TPU is not available, this will fall back to normal Estimator on CPU
   # or GPU.
   estimator = contrib_tpu.TPUEstimator(
       use_tpu=FLAGS.use_tpu,
@@ -227,7 +242,10 @@ def main(_):
       train_batch_size=FLAGS.train_batch_size,
       eval_batch_size=FLAGS.eval_batch_size,
       predict_batch_size=FLAGS.predict_batch_size)
-
+  '''
+  estimator = tf.estimator.Estimator(
+    model_fn=model_fn,config=run_config,params={"batch_size":FLAGS.train_batch_size}
+  )
   if FLAGS.do_train:
     cached_dir = FLAGS.cached_dir
     if not cached_dir:
