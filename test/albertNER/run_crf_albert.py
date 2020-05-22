@@ -211,7 +211,7 @@ def main(_):
     allow_soft_placement=True,log_device_placement=True,gpu_options={"allow_growth":FLAGS.use_gpu})
     #config.gpu_options.allow_growth = True 
     #config.gpu_options.per_process_gpu_memory_fraction = 0.99
-
+  
   run_config = tf.estimator.RunConfig(
       session_config=config,
       model_dir=FLAGS.output_dir,
