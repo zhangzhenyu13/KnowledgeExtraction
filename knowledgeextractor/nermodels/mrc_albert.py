@@ -151,6 +151,8 @@ class NERModel(object):
 '''-------------test---------------'''
 def test():
     nm=NERModel("/home/zhangzy/KnowledgeExtraction/config/mrc_albert_model.json")
+    nm.debug=True
+
     result_dict, result_cls, predictions, na_probs, all_nbest_json =nm.predict([query_data])
     print(len(result_dict[0][9987]),result_dict)
     print("*"*100)
@@ -166,6 +168,8 @@ def test():
 
 def run():
     nm=NERModel("/home/zhangzy/KnowledgeExtraction/config/mrc_albert_model.json")
+    nm.debug=False
+    
     all_nbest_json =nm.predict([query_data])
     print("*"*100)
     print(all_nbest_json)

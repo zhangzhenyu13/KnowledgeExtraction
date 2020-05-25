@@ -9,8 +9,6 @@ from albert import fine_tuning_utils
 from albert import modeling
 from albert import optimization
 from albert import tokenization
-#import tensorflow.compat.v1 as tf
-import tensorflow as tf
 from tensorflow import contrib as tf_contrib
 from tensorflow.contrib import data as contrib_data
 from tensorflow.contrib import metrics as contrib_metrics
@@ -19,7 +17,11 @@ from tensorflow.contrib import cluster_resolver as contrib_cluster_resolver
 from albert import classifier_utils
 from knowledgeextractor import KGEConfig
 from knowledgeextractor.utils import crf_processor
-
+try:
+    import tensorflow.compat.v1 as tf
+except:
+    import tensorflow as tf
+    
 def model_fn_builder(albert_config, num_labels, init_checkpoint, learning_rate,
                      num_train_steps, num_warmup_steps, use_tpu,
                      use_one_hot_embeddings, task_name, hub_module=None,

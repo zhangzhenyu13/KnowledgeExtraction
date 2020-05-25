@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=0,1
 home_dir=/home/zhangzy
 python ${home_dir}/KnowledgeExtraction/test/albertNER/run_crf_albert.py \
    --init_checkpoint ${home_dir}/sharedModels/albert_base_zh/model.ckpt-best \
