@@ -147,7 +147,7 @@ class NERModel(object):
         if self.debug:    
             return result_dict, cls_dict, predictions, na_probs, all_nbest_json
         else:
-            return all_nbest_json
+            return all_nbest_json, na_probs
 '''-------------test---------------'''
 def test():
     nm=NERModel("/home/zhangzy/KnowledgeExtraction/config/mrc_albert_model.json")
@@ -170,10 +170,11 @@ def run():
     nm=NERModel("/home/zhangzy/KnowledgeExtraction/config/mrc_albert_model.json")
     nm.debug=False
     
-    all_nbest_json =nm.predict([query_data])
+    all_nbest_json, na_probs =nm.predict([query_data])
     print("*"*100)
     print(all_nbest_json)
     print("*"*100)
+    print(na_probs)
     print()
 
 if __name__ == "__main__":
@@ -183,7 +184,7 @@ if __name__ == "__main__":
         "id": 9987
     }
 
-    #test()
+    test()
     
     run()
 
