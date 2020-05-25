@@ -1,7 +1,7 @@
 {
     "vocab":"/home/zhangzy/sharedModels/albert_base_zh/vocab_chinese.txt",
     "query_length":64,
-    "max_sequence_length":512,
+    "max_sequence_length":128,
     "doc_stride":64,
     "label_list":"/home/zhangzy/nlpdata/CRF/labels"
 }

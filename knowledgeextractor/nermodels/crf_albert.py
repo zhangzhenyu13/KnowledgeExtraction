@@ -10,17 +10,11 @@ from albert import modeling
 from albert import optimization
 from albert import tokenization
 from tensorflow import contrib as tf_contrib
-from tensorflow.contrib import data as contrib_data
-from tensorflow.contrib import metrics as contrib_metrics
-from tensorflow.contrib import tpu as contrib_tpu
-from tensorflow.contrib import cluster_resolver as contrib_cluster_resolver
 from albert import classifier_utils
 from knowledgeextractor import KGEConfig
 from knowledgeextractor.utils import crf_processor
-try:
-    import tensorflow.compat.v1 as tf
-except:
-    import tensorflow as tf
+
+import tensorflow as tf
     
 def model_fn_builder(albert_config, num_labels, init_checkpoint, learning_rate,
                      num_train_steps, num_warmup_steps, use_tpu,
@@ -54,19 +48,11 @@ def model_fn_builder(albert_config, num_labels, init_checkpoint, learning_rate,
 
         tvars = tf.trainable_variables()
         initialized_variable_names = {}
-        scaffold_fn = None
         if init_checkpoint:
             (assignment_map, initialized_variable_names
                 ) = modeling.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
-            if use_tpu:
-
-                def tpu_scaffold():
-                    tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
-                    return tf.train.Scaffold()
-
-                scaffold_fn = tpu_scaffold
-            else:
-                tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
+            
+            tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
         tf.logging.info("**** Trainable Variables ****")
         for var in tvars:

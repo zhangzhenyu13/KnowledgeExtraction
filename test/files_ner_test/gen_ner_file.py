@@ -106,7 +106,7 @@ class ExampleSementer:
                 sequence[i]=(sequence[i][0], label+"-I")
                 if i==s:
                     sequence[i]=(sequence[i][0], label+"-B")
-        stride=self.max_seq_length//2
+        stride=doc_stride
         start=0
         records=[]
         while start<len(sequence):
@@ -233,16 +233,22 @@ def QueryStyleFile(file_name, cat_filter=None):
 
                 for record in records:
                     tags=record["token_labels"]
+                    
                     if cat_filter:
                         i=0
                         while i<len(tags):
                             if not tags[i].startswith(cat_filter):
                                 tags[i]="O"
                             i+=1
+                    if len(tags)<max_seq_length/10:
+                        continue
+                    lengths.append(len(tags))
                     f2.write(json.dumps(record,ensure_ascii=False)+"\n")
         print(sorted(dict(collections.Counter(lengths)).items(),key=lambda x:x[0] ) )
         print(labels)
         #labels=list(labels)
+        if "O" not in labels:
+            labels.add("O")
         with open(file_name.replace(".json", ".label"), "w", encoding="utf-8") as f:
             f.write("\n".join(labels))
 if __name__ == "__main__":
@@ -256,7 +262,8 @@ if __name__ == "__main__":
     exit(-1)
     #'''
     
-    max_seq_length=128
+    max_seq_length=125
+    doc_stride=32
     source_file="/home/zhangzy/nlpdata/CRF/data.json"
     result_folder="/home/zhangzy/nlpdata/CRF"
 

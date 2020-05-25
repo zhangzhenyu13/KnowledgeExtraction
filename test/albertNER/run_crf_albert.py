@@ -9,8 +9,6 @@ from albert import fine_tuning_utils
 from albert import modeling
 #import tensorflow.compat.v1 as tf
 import tensorflow as tf
-from tensorflow.contrib import cluster_resolver as contrib_cluster_resolver
-from tensorflow.contrib import tpu as contrib_tpu
 from knowledgeextractor.nermodels import crf_albert
 from knowledgeextractor.utils import crf_processor
 
@@ -77,8 +75,11 @@ flags.DEFINE_integer(
     "warmup_step", 100,
     "number of steps to perform linear learning rate warmup for.")
 
-flags.DEFINE_integer("save_checkpoints_steps", 1000,
+flags.DEFINE_integer("save_checkpoints_steps", 200,
                      "How often to save the model checkpoint.")
+
+flags.DEFINE_integer("log_step_count_steps", 20,
+                     "How often to log the loss of training.")
 
 flags.DEFINE_integer("keep_checkpoint_max", 5,
                      "How many checkpoints to keep.")
@@ -123,7 +124,7 @@ def main(_):
   tf.logging.info("building the estimator ...")
   session_config = tf.ConfigProto(
     allow_soft_placement=True,log_device_placement=True,
-    device_count={'GPU': 0,'GPU':1} 
+    device_count={'GPU': 0} 
     )
   session_config.gpu_options.per_process_gpu_memory_fraction = 0.9  
   session_config.gpu_options.allow_growth = True  
@@ -132,7 +133,9 @@ def main(_):
   run_config = tf.estimator.RunConfig(
       session_config=session_config,
       model_dir=FLAGS.output_dir,
-      save_checkpoints_steps=FLAGS.save_checkpoints_steps) 
+      save_checkpoints_steps=FLAGS.save_checkpoints_steps,
+      keep_checkpoint_max=FLAGS.keep_checkpoint_max,
+      log_step_count_steps=FALGS.log_step_count_steps) 
 
   model_fn = crf_albert.model_fn_builder(
       albert_config=albert_config,
