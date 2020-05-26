@@ -116,7 +116,7 @@ def main(_):
 
   tokenizer = fine_tuning_utils.create_vocab(
       vocab_file=FLAGS.vocab_file,
-      do_lower_case=False,
+      do_lower_case=True,
       spm_model_file=None,
       hub_module=None)
 

@@ -69,6 +69,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
                            tokenizer):
     """Converts a single `InputExample` into a single `InputFeatures`."""
     piece_prefix="##"
+
     if isinstance(example, PaddingInputExample):
         return InputFeatures(
             input_ids=[0] * max_seq_length,
@@ -81,14 +82,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     for (i, label) in enumerate(label_list):
         label_map[label] = i
     
-    tokens = tokenizer.tokenize(example.text)
     
-    # Account for [CLS] and [SEP] with "- 2"
-    if len(tokens) > max_seq_length - 2:
-        tokens = tokens[0:(max_seq_length - 2)]
-
-    if example.token_labels is None:
-        example.token_labels=["O"]*len(tokens)
     
     # The convention in ALBERT is:
     # (a) For sequence pairs:
@@ -108,13 +102,12 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     # For classification tasks, the first vector (corresponding to [CLS]) is
     # used as the "sentence vector". Note that this only makes sense because
     # the entire model is fine-tuned.
+
+    #tokens = tokenizer.tokenize(example.text)
+    tokens=[]
     segment_ids = []
-    tokens.insert(0,"[CLS]")
-    segment_ids.append(0)
-    
     label_ids=[]
-    label_id=label_map["O"]
-    label_ids.append(label_id)
+
     '''
     a severe bug exits using the following snippets as the original text are labeled
     character by charater ...
@@ -127,15 +120,38 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
             label_id=label_map[next(it)]
         label_ids.append(label_id)
     '''
+    
     offset=0
-    for token in tokens[1:]:
-        segment_ids.append(0)
-        label_str=example.token_labels[offset]
-        label_ids.append(label_map[label_str])
+    for token in tokenizer.basic_tokenizer.tokenize(example.text):
+        if example.token_labels is None:
+            label_str="O"
+        else:
+            label_str=example.token_labels[offset]
         
-        offset+=len(token.replace("##",""))
+        for sub_token in  tokenizer.wordpiece_tokenizer.tokenize(token):
+            tokens.append(sub_token)
+            label_ids.append(label_map[label_str])
+            segment_ids.append(0)
 
+        offset+=len(token.replace(piece_prefix,""))
+        
 
+    '''
+    tokstr="".join(map(lambda tok: tok.replace(piece_prefix, ""),tokens[1:]))
+    print("-------", tokstr)
+    print("_______", example.text)
+    print("******", example.token_labels)
+    print(len(tokstr),len(example.token_labels),len(example.text))
+    '''
+
+    # Account for [CLS] and [SEP] with "- 2"
+    if len(tokens) > max_seq_length - 2:
+        tokens = tokens[0:(max_seq_length - 2)]
+    
+    tokens.insert(0,"[CLS]")
+    segment_ids.insert(0,0)
+    label_ids.insert(0,label_map["O"])
+    
     tokens.append("[SEP]")
     segment_ids.append(0)
     label_ids.append(label_map["O"])
