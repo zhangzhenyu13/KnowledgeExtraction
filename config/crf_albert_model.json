@@ -3,7 +3,7 @@
     "albert_config_file":"/home/zhangzy/sharedModels/albert_base_zh/albert_config.json",
     "task_name":"",
     "model_name":"",
-    "output_dir":"/home/zhangzy/projectModels/crf_ner_models/model/model.ckpt-200",
+    "output_dir":"/home/zhangzy/projectModels/crf_ner_models/model/model.ckpt-15000",
     "vocab_file":"/home/zhangzy/sharedModels/albert_base_zh/vocab_chinese.txt",
     "spm_model_file":"",
     "init_checkpoint":"/home/zhangzy/sharedModels/albert_base_zh/model.ckpt-best",

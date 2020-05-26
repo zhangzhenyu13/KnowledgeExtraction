@@ -29,8 +29,8 @@ class InputExample(object):
     self.guid = guid
     self.text = text
     self.token_labels=token_labels
-    if self.token_labels is None:
-        self.token_labels = ["O"]* 20
+    #if self.token_labels is None:
+    #    self.token_labels = ["O"]* 20
 
 
 class PaddingInputExample(object):
@@ -82,11 +82,14 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
         label_map[label] = i
     
     tokens = tokenizer.tokenize(example.text)
-  
+    
     # Account for [CLS] and [SEP] with "- 2"
     if len(tokens) > max_seq_length - 2:
         tokens = tokens[0:(max_seq_length - 2)]
 
+    if example.token_labels is None:
+        example.token_labels=["O"]*len(tokens)
+    
     # The convention in ALBERT is:
     # (a) For sequence pairs:
     #  tokens:   [CLS] is this jack ##son ##ville ? [SEP] no it is not . [SEP]
@@ -112,6 +115,10 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     label_ids=[]
     label_id=label_map["O"]
     label_ids.append(label_id)
+    '''
+    a severe bug exits using the following snippets as the original text are labeled
+    character by charater ...
+    we need to modify it
     it=iter(example.token_labels)
     
     for token in tokens[1:]:
@@ -119,6 +126,15 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
         if not token.startswith(piece_prefix): # a new token rather than pieces
             label_id=label_map[next(it)]
         label_ids.append(label_id)
+    '''
+    offset=0
+    for token in tokens[1:]:
+        segment_ids.append(0)
+        label_str=example.token_labels[offset]
+        label_ids.append(label_map[label_str])
+        
+        offset+=len(token.replace("##",""))
+
 
     tokens.append("[SEP]")
     segment_ids.append(0)

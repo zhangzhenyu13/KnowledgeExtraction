@@ -245,12 +245,14 @@ def QueryStyleFile(file_name, cat_filter=None):
                     lengths.append(len(tags))
                     f2.write(json.dumps(record,ensure_ascii=False)+"\n")
         print(sorted(dict(collections.Counter(lengths)).items(),key=lambda x:x[0] ) )
-        print(labels)
         #labels=list(labels)
         if "O" not in labels:
             labels.add("O")
+        labels=sorted(labels)
+        print(labels)
+
         with open(file_name.replace(".json", ".label"), "w", encoding="utf-8") as f:
-            f.write("\n".join(labels))
+            f.write("\n".join(labels)+"\n")
 if __name__ == "__main__":
     '''
     entities = [{"end_pos": 15, "label_type": "解剖部位", "start_pos": 14}, {"label_type": "解剖部位", "start_pos": 19, "end_pos": 20}, {"label_type": "解剖部位", "start_pos": 39, "end_pos": 40}, {"label_type": "解剖部位", "start_pos": 45, "end_pos": 46}, {"end_pos": 50, "label_type": "解剖部位", "start_pos": 48}, {"label_type": "手术", "start_pos": 58, "end_pos": 87}, {"label_type": "疾病和诊断", "start_pos": 94, "end_pos": 99}, {"label_type": "疾病和诊断", "start_pos": 103, "end_pos": 113}, {"label_type": "影像检查", "start_pos": 176, "end_pos": 178}, {"end_pos": 191, "label_type": "解剖部位", "start_pos": 180}, {"label_type": "手术", "start_pos": 249, "end_pos": 277}, {"end_pos": 292, "label_type": "解剖部位", "start_pos": 290}, {"end_pos": 298, "label_type": "解剖部位", "start_pos": 296}, {"label_type": "疾病和诊断", "start_pos": 302, "end_pos": 307}, {"end_pos": 327, "label_type": "药物", "start_pos": 325}, {"end_pos": 336, "label_type": "药物", "start_pos": 333}, {"end_pos": 362, "label_type": "解剖部位", "start_pos": 361}, {"end_pos": 365, "label_type": "解剖部位", "start_pos": 364}, {"end_pos": 396, "label_type": "解剖部位", "start_pos": 395}]

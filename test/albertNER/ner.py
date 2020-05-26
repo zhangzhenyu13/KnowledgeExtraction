@@ -6,8 +6,9 @@ import time
 import importlib
 import numpy as np
 import tensorflow as tf
-import texar.tf as tx
+#import texar.tf as tx
 from albert.lamb_optimizer import LAMBOptimizer
+from albert import optimization
 from knowledgeextractor.utils.scores import scores
 from knowledgeextractor.utils.chinese_CONLL import (create_vocabs, create_vocabs_from_vocab_file, \
     read_data, iterate_batch, CoNLLWriter)
@@ -116,14 +117,14 @@ def crf_layer_loss(logits, labels=None):
 
 crf_loss, _=crf_layer_loss(logits, targets)
 
-mle_loss = tx.losses.sequence_sparse_softmax_cross_entropy(
+'''mle_loss = tx.losses.sequence_sparse_softmax_cross_entropy(
     labels=targets,
     logits=logits,
     sequence_length=seq_lengths,
     average_across_batch=True,
     average_across_timesteps=True,
     sum_over_timesteps=False)
-
+'''
 predicts = tf.argmax(logits, axis=2)
 corrects = tf.reduce_sum(tf.cast(tf.equal(targets, predicts), tf.float32) * masks)
 
@@ -152,14 +153,18 @@ optimizer=LAMBOptimizer(
         exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"]
         )
 
-train_op = tx.core.get_train_op(
+'''train_op = tx.core.get_train_op(
     crf_loss, global_step=global_step, 
     increment_global_step=False,
     optimizer=optimizer,
     #learning_rate=learning_rate,
     #hparams=config.opt
     )
-
+'''
+train_op= optimization.create_optimizer(
+    crf_loss, learning_rate, num_train_steps, int(0.1*num_train_steps),
+                False, "lamb"
+)
 # Training/eval processes
 
 def _train_epoch(sess, epoch, step):

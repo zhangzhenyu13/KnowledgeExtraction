@@ -328,10 +328,17 @@ def test_predict(*args):
 if __name__ == "__main__":
     query_data={
         "guid":"test1",
-        "text":"this is just a test snippet!"
+        "text":"术中探查见盆腹腔未见腹水，子宫增大，约10*8*7CM，饱满，两侧附件未见异常，盆腔及腹主动脉旁淋巴结未及肿大。"
     }
-    
+
     test_init()
+    tokenizer=nm.processor.tokenizer
+    toks=tokenizer.tokenize(query_data["text"])
+    print(toks)
+    print(query_data["text"])
+    
+    exit(-1)
+
     res=test_predict([query_data])
     predictions=res[0]["predictions"]
     feature=nm.processor.processText(query_data)

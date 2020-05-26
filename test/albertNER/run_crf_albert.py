@@ -135,7 +135,7 @@ def main(_):
       model_dir=FLAGS.output_dir,
       save_checkpoints_steps=FLAGS.save_checkpoints_steps,
       keep_checkpoint_max=FLAGS.keep_checkpoint_max,
-      log_step_count_steps=FALGS.log_step_count_steps) 
+      log_step_count_steps=FLAGS.log_step_count_steps) 
 
   model_fn = crf_albert.model_fn_builder(
       albert_config=albert_config,
