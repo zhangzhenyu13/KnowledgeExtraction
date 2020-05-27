@@ -120,7 +120,9 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
             label_id=label_map[next(it)]
         label_ids.append(label_id)
     '''
-    
+
+    '''
+    a severe error also occured as pieces like cm, etc. take 2 positions chars
     offset=0
     for token in tokenizer.basic_tokenizer.tokenize(example.text):
         if example.token_labels is None:
@@ -134,7 +136,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
             segment_ids.append(0)
 
         offset+=len(token.replace(piece_prefix,""))
-        
+    ''' 
 
     '''
     tokstr="".join(map(lambda tok: tok.replace(piece_prefix, ""),tokens[1:]))
@@ -143,15 +145,33 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     print("******", example.token_labels)
     print(len(tokstr),len(example.token_labels),len(example.text))
     '''
+    
+    text="".join(tokenizer.basic_tokenizer.tokenize(example.text) )
+    for offset, word in enumerate(text):
+        if example.token_labels is None:
+            label_str="O"
+        else:
+            label_str=example.token_labels[offset]
+        
+        label=label_map[label_str]
+        if word not in tokenizer.vocab:
+            word="[UNK]"
+
+        tokens.append(word )
+        segment_ids.append(0)
+        label_ids.append(label)
 
     # Account for [CLS] and [SEP] with "- 2"
     if len(tokens) > max_seq_length - 2:
         tokens = tokens[0:(max_seq_length - 2)]
-    
+        segment_ids=segment_ids[0:(max_seq_length-2)]
+        label_ids=label_ids[0:(max_seq_length-2)]
+
+    # inser [CLS]
     tokens.insert(0,"[CLS]")
     segment_ids.insert(0,0)
     label_ids.insert(0,label_map["O"])
-    
+    #add [SEP]
     tokens.append("[SEP]")
     segment_ids.append(0)
     label_ids.append(label_map["O"])
@@ -171,7 +191,6 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
         segment_ids.append(0)
         label_ids.append(label_map["O"])
     #print(len(input_ids), len(input_mask), len(segment_ids), len(label_ids))
-
     assert len(input_ids) == max_seq_length
     assert len(input_mask) == max_seq_length
     assert len(segment_ids) == max_seq_length
@@ -185,8 +204,9 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
         tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
         tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
         tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
-        tf.logging.info("label_ids: %s \n   (ids = %s)" % (" ".join(example.token_labels),
-         " ".join([str(label_id) for label_id in label_ids]) ) )
+        if example.token_labels is not None:
+            tf.logging.info("label_ids: %s \n   (ids = %s)" % (" ".join(example.token_labels),
+            " ".join([str(label_id) for label_id in label_ids]) ) )
 
     feature = InputFeatures(
         input_ids=input_ids,

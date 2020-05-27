@@ -6,6 +6,7 @@ import numpy as np
 import collections
 import six
 import math 
+import json
 
 _PrelimPrediction = collections.namedtuple(  # pylint: disable=invalid-name
     "PrelimPrediction",
@@ -461,3 +462,65 @@ def get_predictions_v2(result_dict, cls_dict, all_examples, all_features,
     assert len(nbest_json) >= 1
 
   return all_predictions, scores_diff_json, all_nbest_json
+
+
+def read_squad_examples(input_file, is_training):
+  """Read a SQuAD style json file into a list of SquadExample."""
+  """
+  each line is json record str like
+  """
+  '''
+  {
+    "context":"a paragraph of text",
+    "qas":[
+      {
+        "id":"qas_id",
+        "question": "query text",
+        "is_impossible": true/false,
+        "answers":[
+          "text":"answer text",
+          "answer_start": "index of the ans text"
+        ] # note: only one answer when training!!!
+      }
+    ]
+  }
+  '''  
+  examples = []
+
+  with open(input_file, "r", encoding="utf-8") as f:
+
+    for line in f:
+      paragraph=json.loads(line.strip())
+
+      paragraph_text = paragraph["context"]
+
+      for qa in paragraph["qas"]:
+        qas_id = qa["id"]
+        question_text = qa["question"]
+        start_position = None
+        orig_answer_text = None
+        is_impossible = False
+
+        if is_training:
+          is_impossible = qa.get("is_impossible", False)
+          if (len(qa["answers"]) != 1) and (not is_impossible):
+            raise ValueError(
+                "For training, each question should have exactly 1 answer.")
+          if not is_impossible:
+            answer = qa["answers"][0]
+            orig_answer_text = answer["text"]
+            start_position = answer["answer_start"]
+          else:
+            start_position = -1
+            orig_answer_text = ""
+
+        example = SquadExample(
+            qas_id=qas_id,
+            question_text=question_text,
+            paragraph_text=paragraph_text,
+            orig_answer_text=orig_answer_text,
+            start_position=start_position,
+            is_impossible=is_impossible)
+        examples.append(example)
+
+  return examples

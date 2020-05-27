@@ -259,7 +259,7 @@ class NERModel(object):
             predict_batch_size=self.config.predict_batch_size)
         '''
         config = tf.ConfigProto(
-            allow_soft_placement=True,log_device_placement=True,
+            allow_soft_placement=True,#log_device_placement=True,
             gpu_options={"allow_growth":self.config.use_gpu})
         
         run_config = tf.estimator.RunConfig(
@@ -337,7 +337,7 @@ if __name__ == "__main__":
     print(toks)
     print(query_data["text"])
     
-    exit(-1)
+    #exit(-1)
 
     res=test_predict([query_data])
     predictions=res[0]["predictions"]

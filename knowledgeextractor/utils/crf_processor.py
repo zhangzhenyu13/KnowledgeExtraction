@@ -129,6 +129,7 @@ class SquenceLabelingTextProcessor(TextProcessor):
         '''
         guid=query_data["guid"]
         text=query_data["text"]
+        #text="".join( self.tokenizer.basic_tokenizer.tokenize(text) )
         example=InputExample(guid=guid, text=text)
         ex_index=0
         label_list=self.label_list

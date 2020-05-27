@@ -1,14 +1,19 @@
-python /home/zhangzy/KnowledgeExtraction/albert/run_squad_v2.py \
-   --init_checkpoint /home/zhangzy/KnowledgeExtraction/data/models/albert_base/model.ckpt-best \
+export CUDA_VISIBLE_DEVICES=0,1
+home_dir=/home/zhangzy
+
+python ${home_dir}/KnowledgeExtraction/albert/run_squad_v2.py \
+   --init_checkpoint ${home_dir}/sharedModels/albert_base_zh/model.ckpt-best \
+   --albert_config_file  ${home_dir}/sharedModels/albert_base_zh/albert_config.json \
+   --vocab_file ${home_dir}/sharedModels/albert_base_zh/vocab_chinese.txt \
    --do_train \
    --do_predict \
-   --train_file /home/zhangzy/KnowledgeExtraction/data/mrc/squad/train-v2.0.json \
-   --predict_file /home/zhangzy/KnowledgeExtraction/data/mrc/squad/dev-v2.0.json \
-   --train_feature_file /home/zhangzy/KnowledgeExtraction/data/mrc/squad/train-features \
-   --predict_feature_file /home/zhangzy/KnowledgeExtraction/data/mrc/squad/predict-features \
-   --predict_feature_left_file /home/zhangzy/KnowledgeExtraction/data/mrc/squad/predict-features-left \
-   --vocab_file /home/zhangzy/KnowledgeExtraction/data/models/albert_base/30k-clean.vocab \
-   --albert_config_file  /home/zhangzy/KnowledgeExtraction/data/models/albert_base/albert_config.json \
-   --output_dir  /home/zhangzy/KnowledgeExtraction/data/saved_models/mrc \
-   #--spm_model_file home/zhangzy/KnowledgeExtraction/data/models/albert_base/30k-clean.model \
+   --max_seq_length 256 \
+   --doc_stride 64 \
+   --max_query_length 64 \
+   --train_file ${home_dir}/nlpdata/MRC/train.json \
+   --predict_file ${home_dir}/nlpdata/MRC/dev.json \
+   --train_feature_file ${home_dir}/nlpdata/MRC/train-features \
+   --predict_feature_file ${home_dir}/nlpdata/MRC/predict-features \
+   --predict_feature_left_file ${home_dir}/nlpdata/MRC/predict-features-left \
+   --output_dir  ${home_dir}/projectModels/mrc_ner_models/ \
 
