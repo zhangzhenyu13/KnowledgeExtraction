@@ -10,7 +10,7 @@ from albert import modeling
 #import tensorflow.compat.v1 as tf
 import tensorflow as tf
 from knowledgeextractor.nermodels import crf_albert
-from knowledgeextractor.utils import crf_processor
+from knowledgeextractor.utils import crf_processor, crf_utils
 
 flags = tf.flags
 
@@ -28,7 +28,7 @@ flags.DEFINE_string(
     "This specifies the model architecture.")
 
 flags.DEFINE_string(
-    "vocab_file", None,
+    "seq_processor", None,
     "The vocabulary file that the ALBERT model was trained on.")
 
 
@@ -112,18 +112,14 @@ def main(_):
 
   processor = crf_processor.TaskTrainProcessor()
 
-  label_list = processor.get_labels(FLAGS.data_dir)
+  seq_proc= crf_processor.SquenceLabelingTextProcessor(config_file=FLAGS.seq_processor)
 
-  tokenizer = fine_tuning_utils.create_vocab(
-      vocab_file=FLAGS.vocab_file,
-      do_lower_case=True,
-      spm_model_file=None,
-      hub_module=None)
+  label_list = seq_proc.label_list
 
   # construct estimator
   tf.logging.info("building the estimator ...")
   session_config = tf.ConfigProto(
-    allow_soft_placement=True,log_device_placement=True,
+    allow_soft_placement=True, #log_device_placement=True,
     device_count={'GPU': 0} 
     )
   session_config.gpu_options.per_process_gpu_memory_fraction = 0.9  
@@ -144,10 +140,6 @@ def main(_):
       learning_rate=FLAGS.learning_rate,
       num_train_steps=FLAGS.train_step,
       num_warmup_steps=FLAGS.warmup_step,
-      use_tpu=False,
-      use_one_hot_embeddings=False,
-      task_name="",
-      hub_module=None,
       optimizer=FLAGS.optimizer)
 
   
@@ -160,20 +152,18 @@ def main(_):
 
     train_file = os.path.join(cached_dir,  "_train.tf_record")
     if not tf.gfile.Exists(train_file):
-      crf_processor.file_based_convert_examples_to_features(
-          train_examples, label_list, FLAGS.max_seq_length, tokenizer,
-          train_file, "")
+      crf_utils.file_based_convert_examples_to_features(
+          train_examples, FLAGS.max_seq_length, seq_proc,
+          train_file)
     tf.logging.info("***** Running training *****")
     tf.logging.info("  Num examples = %d", len(train_examples))
     tf.logging.info("  Batch size = %d", FLAGS.train_batch_size)
     tf.logging.info("  Num steps = %d", FLAGS.train_step)
-    train_input_fn = crf_processor.file_based_input_fn_builder(
+    train_input_fn = crf_utils.file_based_input_fn_builder(
         input_file=train_file,
         seq_length=FLAGS.max_seq_length,
         is_training=True,
         drop_remainder=True,
-        task_name="",
-        use_tpu=False,
         bsz=FLAGS.train_batch_size)
     estimator.train(input_fn=train_input_fn, max_steps=FLAGS.train_step)
 
@@ -183,9 +173,9 @@ def main(_):
 
     eval_file = os.path.join(cached_dir,  "_eval.tf_record")
     if not tf.gfile.Exists(eval_file):
-      crf_processor.file_based_convert_examples_to_features(
-          eval_examples, label_list, FLAGS.max_seq_length, tokenizer,
-          eval_file, "")
+      crf_utils.file_based_convert_examples_to_features(
+          eval_examples, FLAGS.max_seq_length, seq_proc,
+          eval_file)
 
     tf.logging.info("***** Running evaluation *****")
     tf.logging.info("  Num examples = %d (%d actual, %d padding)",
@@ -197,13 +187,11 @@ def main(_):
     eval_steps = None
     
     eval_drop_remainder = False
-    eval_input_fn = crf_processor.file_based_input_fn_builder(
+    eval_input_fn = crf_utils.file_based_input_fn_builder(
         input_file=eval_file,
         seq_length=FLAGS.max_seq_length,
         is_training=False,
         drop_remainder=eval_drop_remainder,
-        task_name="",
-        use_tpu=False,
         bsz=FLAGS.eval_batch_size)
 
     best_trial_info_file = os.path.join(FLAGS.output_dir, "best_trial.txt")
@@ -311,10 +299,10 @@ def main(_):
     num_actual_predict_examples = len(predict_examples)
 
     predict_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
-    crf_processor.file_based_convert_examples_to_features(
-        predict_examples, label_list,
-        FLAGS.max_seq_length, tokenizer,
-        predict_file, "")
+    crf_utils.file_based_convert_examples_to_features(
+        predict_examples,
+        FLAGS.max_seq_length, seq_proc,
+        predict_file)
 
     tf.logging.info("***** Running prediction*****")
     tf.logging.info("  Num examples = %d (%d actual, %d padding)",
@@ -323,13 +311,11 @@ def main(_):
     tf.logging.info("  Batch size = %d", FLAGS.predict_batch_size)
 
     predict_drop_remainder = False
-    predict_input_fn = crf_processor.file_based_input_fn_builder(
+    predict_input_fn = crf_utils.file_based_input_fn_builder(
         input_file=predict_file,
         seq_length=FLAGS.max_seq_length,
         is_training=False,
         drop_remainder=predict_drop_remainder,
-        task_name="",
-        use_tpu=False,
         bsz=FLAGS.predict_batch_size)
 
     checkpoint_path = os.path.join(FLAGS.output_dir, "model.ckpt-best")
@@ -364,4 +350,5 @@ def main(_):
 if __name__ == "__main__":
   flags.mark_flag_as_required("data_dir")
   flags.mark_flag_as_required("output_dir")
+  flags.mark_flag_as_required("seq_processor")
   tf.app.run()

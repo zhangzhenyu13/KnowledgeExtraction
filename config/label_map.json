@@ -1,0 +1,17 @@
+{
+    "O": "O",
+    "实验室检验": "examination",
+    "影像检查": "examination",
+    "手术": "operation",
+    "疾病和诊断": "disease",
+    "药物": "medicine",
+    "解剖部位": "organization",
+    "organization": "organization",
+    "disease":"disease",
+    "diagnosis": "diagnosis",
+    "examination": "examination",
+    "medicine": "medicine",
+    "operation": "operation",
+    "symptom": "symptom",
+    "department": "department"
+}

@@ -3,7 +3,7 @@ import json
 import collections
 #from textblob import TextBlob
 from knowledgeextractor.utils.text_segment import to_sentences
-import re
+
 class ExampleSementer:
     def __init__(self, max_seq_length, key_text="originalText", key_entities="entities"):
         self.max_seq_length=max_seq_length
@@ -70,11 +70,12 @@ class ExampleSementer:
         #print(lengths)
 
         for sent in sents:
-            self._curLen+=len(sent)
-            self._txts.append(sent)
-            if self._curLen>self.max_seq_length:
+            if self._curLen+len(sent)>max_seq_length and len(self._txts)>0:
                 record=self._get_record(entities)
                 records.append(record)
+            self._curLen+=len(sent)
+            self._txts.append(sent)
+                
 
         if self._curLen>0:
             record=self._get_record(entities)
@@ -86,10 +87,22 @@ class ExampleSementer:
         
         return records
 
-    def label_and_seg_single_exmple(self, record):
+    def gatherLabels(self, records):
+        labels=set()
+        for record in records:
+            token_labels= record["token_labels"]
+            labels=labels.union(token_labels)
+                
+        if "O" not in labels:
+            labels.add("O")
+        
+        labels=sorted(labels)
+        return labels
+
+    def label_single_example(self, record):
         # label the example and then seg it into several records
-        entities=record[self.key_entities]
-        text=record[self.key_text]
+        entities=record["entities"]
+        text=record["text"]
         sequence=[[word, "O"] for word in text]
         nested=0
         labels=set()
@@ -106,25 +119,19 @@ class ExampleSementer:
                 sequence[i]=(sequence[i][0], label+"-I")
                 if i==s:
                     sequence[i]=(sequence[i][0], label+"-B")
-        stride=doc_stride
-        start=0
-        records=[]
-        while start<len(sequence):
-            records.append(sequence[start:start+self.max_seq_length] )
-            start+=stride
-        records=map(lambda record: 
-            {
-                "text": "".join([w for w,_ in record]),
-                "token_labels": [t for _,t in record]
-            }, 
-            records
-        )
-        #records=list(records)
-        return records, labels
+        
+        record={
+                "text": "".join([w for w,_ in sequence]),
+                "token_labels": [t for _,t in sequence]
+        }
+        
+        return record
 
-def cleamCMID(file_name,max_seq_len):
+def segCMIDRecords(file_name,max_seq_len):
     lengths=[]
     segger=ExampleSementer(max_seq_len)
+    records=[]
+
     with open(file_name, "r", encoding="utf-8") as f:
         
         with open(file_name.replace(".json", "-clean.json"), "w", encoding="utf-8") as f2:
@@ -135,18 +142,19 @@ def cleamCMID(file_name,max_seq_len):
                 right=line.rfind("}")
                 line=line[left:right+1]
                 
-                records=segger.seg_single_exmple(json.loads(line))
-                for record in records:
-                    if record["entities"]:
-                        
-                        obj={"originalText":record["text"], "entities":record["entities"]}
-                        lengths.append(len(obj["originalText"]))
-                        #print(obj)
-                        f2.write(json.dumps(obj,ensure_ascii=False)+"\n")
+                records.extend( segger.seg_single_exmple(json.loads(line)) )
+                
+            for record in records:
+                if record["entities"]:
+                    
+                    obj={"originalText":record["text"], "entities":record["entities"]}
+                    lengths.append(len(obj["originalText"]))
+                    #print(obj)
+                    f2.write(json.dumps(obj,ensure_ascii=False)+"\n")
         print(sorted(dict(collections.Counter(lengths)).items(),key=lambda x:x[0] ) )
 
 
-def CMID2CONLLFile(file_name, folder):
+def fromCMIDtoCONLLFile(file_name, folder):
     count=0
     null=0
     nested=0
@@ -215,9 +223,32 @@ def CMID2CONLLFile(file_name, folder):
         f.writelines("\n".join(labels))
 
 
-def QueryStyleFile(file_name, cat_filter=None):
+def taggerMapping(tagger_map_file, records_file):
+    with open(tagger_map_file, "r", encoding="utf-8") as f:
+        tag_mapper=json.load(f)
+
+    records=[]
+    with open(records_file, "r", encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            left=line.find("{")
+            right=line.rfind("}")
+            line=line[left:right+1]
+            record=json.loads(line)
+            for entity in record["entities"]:
+                entity["label_type"]=tag_mapper[entity["label_type"]]
+            
+            records.append(record)
+
+    with open(records_file.replace(".json", "-mapped.json"), "w", encoding="utf-8") as f:
+        for record in records:
+            f.write(json.dumps(record)+"\n")
+    
+def genTaggerFile(file_name):
     lengths=[]
     labels=set()
+    records=[]
     segger=ExampleSementer(max_seq_length)
     with open(file_name, "r", encoding="utf-8") as f:
         with open(file_name.replace(".json", "-seg.json"), "w", encoding="utf-8") as f2:
@@ -228,31 +259,27 @@ def QueryStyleFile(file_name, cat_filter=None):
                 right=line.rfind("}")
                 line=line[left:right+1]
                 
-                records, labels1=segger.label_and_seg_single_exmple(json.loads(line))
-                labels=labels|labels1
+                records.extend( map(lambda record: segger.label_single_example(record) ,
+                    segger.seg_single_exmple(json.loads(line)) )
+                )
 
-                for record in records:
-                    tags=record["token_labels"]
-                    
-                    if cat_filter:
-                        i=0
-                        while i<len(tags):
-                            if not tags[i].startswith(cat_filter):
-                                tags[i]="O"
-                            i+=1
-                    if len(tags)<max_seq_length/10:
-                        continue
-                    lengths.append(len(tags))
-                    f2.write(json.dumps(record,ensure_ascii=False)+"\n")
+            for record in records:
+                #print(record)
+                tags=record["token_labels"]
+                words=record["text"]
+                if len(words)<min_sequence_length:
+                    continue
+                assert len(tags)==len(words)
+                lengths.append(len(tags))
+                f2.write(json.dumps(record,ensure_ascii=False)+"\n")
+
+        labels=segger.gatherLabels(records)
         print(sorted(dict(collections.Counter(lengths)).items(),key=lambda x:x[0] ) )
-        #labels=list(labels)
-        if "O" not in labels:
-            labels.add("O")
-        labels=sorted(labels)
         print(labels)
 
         with open(file_name.replace(".json", ".label"), "w", encoding="utf-8") as f:
             f.write("\n".join(labels)+"\n")
+
 if __name__ == "__main__":
     '''
     entities = [{"end_pos": 15, "label_type": "解剖部位", "start_pos": 14}, {"label_type": "解剖部位", "start_pos": 19, "end_pos": 20}, {"label_type": "解剖部位", "start_pos": 39, "end_pos": 40}, {"label_type": "解剖部位", "start_pos": 45, "end_pos": 46}, {"end_pos": 50, "label_type": "解剖部位", "start_pos": 48}, {"label_type": "手术", "start_pos": 58, "end_pos": 87}, {"label_type": "疾病和诊断", "start_pos": 94, "end_pos": 99}, {"label_type": "疾病和诊断", "start_pos": 103, "end_pos": 113}, {"label_type": "影像检查", "start_pos": 176, "end_pos": 178}, {"end_pos": 191, "label_type": "解剖部位", "start_pos": 180}, {"label_type": "手术", "start_pos": 249, "end_pos": 277}, {"end_pos": 292, "label_type": "解剖部位", "start_pos": 290}, {"end_pos": 298, "label_type": "解剖部位", "start_pos": 296}, {"label_type": "疾病和诊断", "start_pos": 302, "end_pos": 307}, {"end_pos": 327, "label_type": "药物", "start_pos": 325}, {"end_pos": 336, "label_type": "药物", "start_pos": 333}, {"end_pos": 362, "label_type": "解剖部位", "start_pos": 361}, {"end_pos": 365, "label_type": "解剖部位", "start_pos": 364}, {"end_pos": 396, "label_type": "解剖部位", "start_pos": 395}]
@@ -263,13 +290,27 @@ if __name__ == "__main__":
     
     exit(-1)
     #'''
-    
-    max_seq_length=125
-    doc_stride=32
-    source_file="/home/zhangzy/nlpdata/CRF/data.json"
-    result_folder="/home/zhangzy/nlpdata/CRF"
 
-    QueryStyleFile(source_file)
+    import argparse
+    parser=argparse.ArgumentParser()
+    parser.add_argument("--data", default="/home/zhangzy/nlpdata/CRF/data.json")
+    parser.add_argument("--mapper", default="/home/zhangzy/KnowledgeExtraction/config/label_map.json")
+
+    parser.add_argument("--max_sequence_length", default=382)
+    parser.add_argument("--min_sequence_length", default=32)
+
+
+    args=parser.parse_args()
+
+    source_file=args.data
+    tagger_map_file=args.mapper
+    max_seq_length=args.max_sequence_length
+    min_sequence_length=args.min_sequence_length
+
+    taggerMapping(tagger_map_file,source_file)
+    genTaggerFile(source_file.replace(".json", "-mapped.json"))
+
+    #result_folder="/home/zhangzy/nlpdata/CRF"
     #cleamCMID(source_file,max_seq_length)
     
     #source_file="/home/zhangzy/KnowledgeExtraction/data/ner/yidu7k/ner-clean.json"

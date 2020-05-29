@@ -1,0 +1,33 @@
+{
+    "O": "O",
+    "实验室检验-B": "examination-B",
+    "实验室检验-I": "examination-I",
+    "影像检查-B": "examination-B",
+    "影像检查-I": "examination-I",
+    "手术-B": "operation-B",
+    "手术-I": "operation-I",
+    "疾病和诊断-B": "disease-B",
+    "疾病和诊断-I": "disease-I",
+    "药物-B": "medicine-B",
+    "药物-I": "medicine-I",
+    "解剖部位-B": "orgnization-B",
+    "解剖部位-I": "orgnization-I",
+
+
+    "orgnization-B": "orgnization-B",
+    "orgnization-I": "orgnization-I",
+    "disease-B":"disease-B",
+    "disease-I":"disease-I",
+    "diagnosis-B": "diagnosis-B",
+    "diagnosis-I": "diagnosis-I",
+    "examination-B": "examination-B",
+    "examination-I": "examination-I",
+    "medicine-B": "medicine-B",
+    "medicine-I": "medicine-I",
+    "operation-B": "operation-B",
+    "operation-I": "operation-I",
+    "symptom-B": "symptom-B",
+    "symptom-I": "symptom-I",
+    "department-B": "department-B",
+    "department-I": "department-I"
+}
