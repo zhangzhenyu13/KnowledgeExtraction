@@ -197,7 +197,7 @@ class NERModel(object):
             session_config=config)  
         
         self.estimator= tf.estimator.Estimator(
-            model_fn=model_fn, model_dir=self.config.saved_checkpoint,
+            model_fn=model_fn, #model_dir=self.config.saved_checkpoint,
             config=run_config, params={"batch_size":self.config.batch_size}
         )
     
@@ -215,7 +215,7 @@ class NERModel(object):
 
         result = self.estimator.predict(
             input_fn=predict_input_fn
-            #,checkpoint_path=self.config.saved_checkpoint 
+            ,checkpoint_path=self.config.saved_checkpoint 
             )
 
         

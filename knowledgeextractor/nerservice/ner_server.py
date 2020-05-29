@@ -18,7 +18,7 @@ class CRFServer(KGEHTTPPServer):
             query_data=query_list[i]
             feature=self.ner_model.processor.processText(query_data)
             input_ids=feature.input_ids
-            words, tags= self.ner_model.processor.recover_token_tags(pred_ids,input_ids)
+            words, tags= self.ner_model.processor.recover_words_tags(pred_ids,input_ids)
             results.append({
                     "words":words,
                     "tags":tags,
