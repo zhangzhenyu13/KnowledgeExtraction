@@ -2,7 +2,7 @@
     "processor":"/home/zhangzy/KnowledgeExtraction/config/crf_processor.json",
     "albert_config_file":"/home/zhangzy/sharedModels/albert_base_zh/albert_config.json",
     "model_name":"",
-    "saved_checkpoint":"/home/zhangzy/projectModels/crf_ner_models/model.ckpt-400",
+    "saved_checkpoint":"/home/zhangzy/projectModels/crf_ner_models/model.ckpt-12600",
     "do_lower_case":true,
     "max_seq_length":384,
     "batch_size":8,

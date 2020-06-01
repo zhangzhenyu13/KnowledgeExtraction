@@ -4,3 +4,4 @@ data
 tmp
 saved_ner_models
 .vscode
+eval
