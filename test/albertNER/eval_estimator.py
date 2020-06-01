@@ -5,6 +5,7 @@ from tornado import httpclient
 from tornado.httputil import HTTPServerRequest
 import json
 from knowledgeextractor.utils import crf_utils
+import random
 
 def create_examples(file_name):
     """Creates examples from json lines."""
@@ -67,7 +68,8 @@ def requestServer(query_list, bsz=8):
         
         try:
             response = http_client.fetch(http_request)
-            print(response.body.decode(encoding="utf-8"))
+            #print(response.body.decode(encoding="utf-8"))
+            print("processed {} queries".format(len(query_batch)))
             results.extend(json.loads(response.body.decode(encoding="utf-8"))["predictions"])
 
         except httpclient.HTTPError as e:
@@ -81,9 +83,10 @@ def requestServer(query_list, bsz=8):
     http_client.close()
 
     return results
-def loadData(data_folder, size=100):
+def loadData(data_folder, size=1000):
     
     examples=create_examples(os.path.join(data_folder,"CRF","test.json"))
+    random.shuffle(examples)
     print("exmples:", len(examples))
     examples=examples[:size]
     query_list=[
