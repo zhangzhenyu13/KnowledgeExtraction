@@ -117,7 +117,7 @@ def create_model(albert_config, is_training, input_ids, input_mask, segment_ids,
 
 
     (loss, probabilities, predictions)=[None]*3
-
+    
     with tf.variable_scope("project"):
         """
         hidden layer between lstm layer and logits
@@ -195,10 +195,11 @@ class NERModel(object):
         
         run_config = tf.estimator.RunConfig(
             session_config=config)  
-        
+        ws=tf.estimator.WarmStartSettings(ckpt_to_initialize_from=self.config.saved_checkpoint )
         self.estimator= tf.estimator.Estimator(
             model_fn=model_fn, #model_dir=self.config.saved_checkpoint,
             config=run_config, params={"batch_size":self.config.batch_size}
+            , warm_start_from=ws
         )
     
 
@@ -215,7 +216,7 @@ class NERModel(object):
 
         result = self.estimator.predict(
             input_fn=predict_input_fn
-            ,checkpoint_path=self.config.saved_checkpoint 
+            #,checkpoint_path=self.config.saved_checkpoint 
             )
 
         

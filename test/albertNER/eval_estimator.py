@@ -6,6 +6,7 @@ from tornado.httputil import HTTPServerRequest
 import json
 from knowledgeextractor.utils import crf_utils
 import random
+import time
 
 def create_examples(file_name):
     """Creates examples from json lines."""
@@ -49,15 +50,15 @@ def eval(data, data_tag="compare-test"):
          (file_name, acc, precision, recall, f1) )
     return acc, precision, recall, f1
 
-def requestServer(query_list, bsz=8):
-    
+def requestServer(query_list, bsz=8, URI="http://192.168.12.224:12301/methodCore"):
+    t0=0
     http_client = httpclient.HTTPClient()
     query_list=[ query_list[i:i+bsz] for i in range(0,len(query_list), bsz) ]
     results=[]
     for query_batch in query_list:
         
         http_request= httpclient.HTTPRequest(
-            url="http://127.0.0.1:12301/methodCore",
+            url=URI,
             method="POST",
             body=json.dumps(
                 {
@@ -67,9 +68,11 @@ def requestServer(query_list, bsz=8):
         )
         
         try:
+            t0=time.time()
             response = http_client.fetch(http_request)
+            t1=time.time()
             #print(response.body.decode(encoding="utf-8"))
-            print("processed {} queries".format(len(query_batch)))
+            print("processed {} queries({}s)".format(len(query_batch), t1-t0))
             results.extend(json.loads(response.body.decode(encoding="utf-8"))["predictions"])
 
         except httpclient.HTTPError as e:
@@ -83,10 +86,10 @@ def requestServer(query_list, bsz=8):
     http_client.close()
 
     return results
-def loadData(data_folder, size=1000):
+def loadData(data_folder, size=100):
     
     examples=create_examples(os.path.join(data_folder,"CRF","test.json"))
-    random.shuffle(examples)
+    #random.shuffle(examples)
     print("exmples:", len(examples))
     examples=examples[:size]
     query_list=[
@@ -97,9 +100,11 @@ def loadData(data_folder, size=1000):
 
 
 if __name__ == "__main__":
+    
     data_folder="/home/zhangzy/nlpdata"
+    url="http://127.0.0.1:12301/methodCore"
     test_examples, test_query_list=loadData(data_folder)
-    predictions=requestServer(test_query_list)
+    predictions=requestServer(test_query_list, URI=url)
 
     compare_data=[
         {
