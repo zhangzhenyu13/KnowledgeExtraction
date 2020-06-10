@@ -250,7 +250,7 @@ def main(_):
           if gstep not in steps_and_files:
             tf.logging.info("Add {} to eval list.".format(cur_filename))
             steps_and_files[gstep] = cur_filename
-      tf.logging.info("found {} files.".format(len(steps_and_files)))
+      tf.logging.info("found {} files, gloabl step:{}".format(len(steps_and_files), global_step))
       if not steps_and_files:
         tf.logging.info("found 0 file, global step: {}. Sleeping."
                         .format(global_step))

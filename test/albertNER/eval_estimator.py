@@ -50,7 +50,7 @@ def eval(data, data_tag="compare-test"):
          (file_name, acc, precision, recall, f1) )
     return acc, precision, recall, f1
 
-def requestServer(query_list, bsz=8, URI="http://192.168.12.224:12301/methodCore"):
+def requestServer(query_list, URI, bsz=8):
     t0=0
     http_client = httpclient.HTTPClient()
     query_list=[ query_list[i:i+bsz] for i in range(0,len(query_list), bsz) ]
@@ -89,7 +89,7 @@ def requestServer(query_list, bsz=8, URI="http://192.168.12.224:12301/methodCore
 def loadData(data_folder, size=100):
     
     examples=create_examples(os.path.join(data_folder,"CRF","test.json"))
-    #random.shuffle(examples)
+    random.shuffle(examples)
     print("exmples:", len(examples))
     examples=examples[:size]
     query_list=[
@@ -103,6 +103,7 @@ if __name__ == "__main__":
     
     data_folder="/home/zhangzy/nlpdata"
     url="http://127.0.0.1:12301/methodCore"
+    url="http://192.168.12.224:12301/methodCore"
     test_examples, test_query_list=loadData(data_folder)
     predictions=requestServer(test_query_list, URI=url)
 

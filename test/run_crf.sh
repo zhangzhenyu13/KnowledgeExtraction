@@ -5,7 +5,7 @@ python ${home_dir}/KnowledgeExtraction/test/albertNER/run_crf_albert.py \
    --albert_config_file  ${home_dir}/sharedModels/albert_base_zh/albert_config.json \
    --seq_processor ${home_dir}/KnowledgeExtraction/config/crf_processor.json \
    --max_seq_length 384 \
-   --do_train \
+   --train_step 12600 \
    --do_predict \
    --do_eval \
    --data_dir ${home_dir}/nlpdata/ \

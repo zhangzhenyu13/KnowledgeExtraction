@@ -39,7 +39,7 @@ def model_fn_builder(albert_config, num_labels, init_checkpoint, learning_rate,
         else:
             is_real_example = tf.ones(tf.shape(label_ids), dtype=tf.float32)
 
-        is_training = (mode == tf.estimator.ModeKeys.TRAIN)
+        is_training = (mode == tf.estimator.ModeKeys.TRAIN) or (mode == tf.estimator.ModeKeys.EVAL)
 
         (total_loss, probabilities, logits, predictions) = \
             create_model(albert_config, is_training, input_ids, input_mask,
@@ -74,13 +74,16 @@ def model_fn_builder(albert_config, num_labels, init_checkpoint, learning_rate,
                 train_op=train_op) 
 
         elif mode == tf.estimator.ModeKeys.EVAL:
+            #tf.logging.info("predictions;{}\n, labels;{}".format(predictions,label_ids))
             
-            corrects = tf.reduce_sum(tf.cast(tf.equal(labels, predictions), tf.float32) * input_mask)
-            accuracy=corrects/tf.reduce_sum(input_mask)
-                
+            corrects = tf.cast(
+                tf.equal(label_ids, tf.cast(predictions, tf.int32)), 
+                tf.float32) * tf.cast(input_mask, tf.float32)
+            accuracy=corrects / tf.cast(tf.reduce_sum(input_mask), tf.float32)
+            accuracy=tf.reshape(accuracy, (-1,))
             eval_metrics= {
-                    "eval_accuracy": accuracy,
-                    "eval_loss": total_loss,
+                    "eval_accuracy": tf.metrics.mean(accuracy)
+                    #"eval_loss": total_loss,
                 }
             
             output_spec = tf.estimator.EstimatorSpec(

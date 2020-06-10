@@ -1,4 +1,5 @@
 import argparse
+import random
 parser=argparse.ArgumentParser()
 parser.add_argument("--data", type=str,help="file to split into train, dev and test")
 args=parser.parse_args()
@@ -12,6 +13,7 @@ with open(args.data, "r", encoding="utf-8") as f:
                 records=[]
                 for line in f:
                     records.append(line)
+                random.shuffle(records)
                 size=len(records)
                 train_size=int(0.9*size)
                 dev_size=int(0.03*size)
