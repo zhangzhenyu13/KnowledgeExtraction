@@ -1,0 +1,12 @@
+{
+    "max_length": 80, 
+    "blank_padding": true,
+    "model_dict": "/home/zhangzy/projectModels/nre_models/model-best",
+    "rel2id":"/home/zhangzy/KnowledgeExtraction/benchmark/wiki80/wiki80_re2id.json",
+    "word2id":"/home/zhangzy/KnowledgeExtraction/pretrain/glove/glove.6B.50d_word2id.json",
+    "wordsize": 50,
+    "position_size": 5,
+    "hidden_size": 230,
+    "kernel_size": 3,
+    "padding_size": 1
+}

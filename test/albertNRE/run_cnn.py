@@ -4,31 +4,32 @@ import os
 import numpy as np
 import opennre
 from opennre import encoder, model, framework
-import argparse
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--mask_entity', action='store_true', help='Mask entity mentions')
-parser.add_argument("--albert_path", default="/home/zhangzy/sharedModels/pytorch_albert", help="path to the albert model")
-
-args = parser.parse_args()
 
 # Some basic settings
 root_path = '.'
-sys.path.append(root_path)
 if not os.path.exists('ckpt'):
     os.mkdir('ckpt')
-ckpt = 'ckpt/wiki80_bertentity_softmax.pth.tar'
+ckpt = 'ckpt/wiki80_cnn_softmax.pth.tar'
 
 # Check data
 opennre.download('wiki80', root_path=root_path)
-#opennre.download('bert_base_uncased', root_path=root_path)
+opennre.download('glove', root_path=root_path)
 rel2id = json.load(open(os.path.join(root_path, 'benchmark/wiki80/wiki80_rel2id.json')))
+wordi2d = json.load(open(os.path.join(root_path, 'pretrain/glove/glove.6B.50d_word2id.json')))
+word2vec = np.load(os.path.join(root_path, 'pretrain/glove/glove.6B.50d_mat.npy'))
 
 # Define the sentence encoder
-sentence_encoder = opennre.encoder.BERTEntityEncoder(
-    max_length=80, 
-    pretrain_path=args.albert_path, #os.path.join(root_path, 'pretrain/bert-base-uncased'),
-    mask_entity=args.mask_entity
+sentence_encoder = opennre.encoder.CNNEncoder(
+    token2id=wordi2d,
+    max_length=40,
+    word_size=50,
+    position_size=5,
+    hidden_size=230,
+    blank_padding=True,
+    kernel_size=3,
+    padding_size=1,
+    word2vec=word2vec,
+    dropout=0.5
 )
 
 # Define the model
@@ -41,10 +42,11 @@ framework = opennre.framework.SentenceRE(
     test_path=os.path.join(root_path, 'benchmark/wiki80/wiki80_val.txt'),
     model=model,
     ckpt=ckpt,
-    batch_size=64, # Modify the batch size w.r.t. your device
-    max_epoch=10,
-    lr=2e-5,
-    opt='adamw'
+    batch_size=32,
+    max_epoch=5,
+    lr=0.1,
+    weight_decay=1e-5,
+    opt='sgd'
 )
 
 # Train the model

@@ -1,0 +1,9 @@
+{
+    "max_length": 80, 
+    "config_path":"/home/zhangzy/KnowledgeExtraction/config/albert_config.json",
+    "blank_padding": true,
+    "mask_entity": false,
+    "from_scrach": true,
+    "model_dict": "/home/zhangzy/projectModels/nre_models/model-best",
+    "rel2id":"/home/zhangzy/KnowledgeExtraction/wiki80_re2id.json"
+}
